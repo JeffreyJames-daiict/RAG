@@ -1,0 +1,224 @@
+{
+  "$defs": {
+    "AppConfig": {
+      "description": "Application metadata and environment.",
+      "properties": {
+        "name": {
+          "default": "Enterprise RAG Pipeline",
+          "description": "Human-readable application name",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "default": "0.1.0",
+          "description": "Semantic version string",
+          "title": "Version",
+          "type": "string"
+        },
+        "env": {
+          "default": "development",
+          "description": "Environment: development | staging | production",
+          "title": "Env",
+          "type": "string"
+        }
+      },
+      "title": "AppConfig",
+      "type": "object"
+    },
+    "ChunkingConfigModel": {
+      "description": "Token-aware recursive text splitting settings.",
+      "properties": {
+        "chunk_size": {
+          "default": 512,
+          "description": "Target token budget per chunk",
+          "maximum": 8192,
+          "minimum": 32,
+          "title": "Chunk Size",
+          "type": "integer"
+        },
+        "chunk_overlap": {
+          "default": 64,
+          "description": "Token overlap between adjacent chunks",
+          "minimum": 0,
+          "title": "Chunk Overlap",
+          "type": "integer"
+        },
+        "chunking_version": {
+          "default": "v1.0",
+          "description": "Strategy version tag stored on chunk records",
+          "title": "Chunking Version",
+          "type": "string"
+        },
+        "encoding_model": {
+          "default": "cl100k_base",
+          "description": "tiktoken encoding model",
+          "title": "Encoding Model",
+          "type": "string"
+        }
+      },
+      "title": "ChunkingConfigModel",
+      "type": "object"
+    },
+    "DatabaseConfig": {
+      "description": "Database connection and pooling parameters.",
+      "properties": {
+        "url": {
+          "default": "sqlite:///rag.db",
+          "description": "SQLAlchemy connection URI (e.g. postgresql://user:pass@host:5432/rag)",
+          "title": "Url",
+          "type": "string"
+        },
+        "pool_size": {
+          "default": 5,
+          "description": "Connection pool size for persistent connections",
+          "minimum": 1,
+          "title": "Pool Size",
+          "type": "integer"
+        },
+        "max_overflow": {
+          "default": 10,
+          "description": "Max overflow connections allowed",
+          "minimum": 0,
+          "title": "Max Overflow",
+          "type": "integer"
+        },
+        "echo": {
+          "default": false,
+          "description": "Log all generated SQL queries",
+          "title": "Echo",
+          "type": "boolean"
+        }
+      },
+      "title": "DatabaseConfig",
+      "type": "object"
+    },
+    "LoggingConfig": {
+      "description": "Logging format and level.",
+      "properties": {
+        "level": {
+          "default": "INFO",
+          "description": "Logging level: DEBUG | INFO | WARNING | ERROR | CRITICAL",
+          "title": "Level",
+          "type": "string"
+        },
+        "format": {
+          "default": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+          "description": "Standard logging format string",
+          "title": "Format",
+          "type": "string"
+        }
+      },
+      "title": "LoggingConfig",
+      "type": "object"
+    },
+    "ParserConfig": {
+      "description": "Document extraction and parsing settings.",
+      "properties": {
+        "version": {
+          "default": "pymupdf-v1.0",
+          "description": "Parser version identifier recorded on snapshots",
+          "title": "Version",
+          "type": "string"
+        },
+        "extract_images": {
+          "default": false,
+          "description": "Extract and annotate image blocks during PDF parse",
+          "title": "Extract Images",
+          "type": "boolean"
+        },
+        "supported_mime_types": {
+          "description": "List of MIME types handled by the parser",
+          "items": {
+            "type": "string"
+          },
+          "title": "Supported Mime Types",
+          "type": "array"
+        }
+      },
+      "title": "ParserConfig",
+      "type": "object"
+    },
+    "PipelineConfig": {
+      "description": "Ingestion and sync pipeline behavior.",
+      "properties": {
+        "default_tenant_id": {
+          "default": "default",
+          "description": "Tenant key when omitted in payloads",
+          "title": "Default Tenant Id",
+          "type": "string"
+        },
+        "handle_deletions": {
+          "default": true,
+          "description": "Soft-delete DB documents missing from source",
+          "title": "Handle Deletions",
+          "type": "boolean"
+        },
+        "force_fetch": {
+          "default": false,
+          "description": "Force re-fetching payloads regardless of timestamp/hash",
+          "title": "Force Fetch",
+          "type": "boolean"
+        },
+        "auto_migrate": {
+          "default": true,
+          "description": "Ensure database tables exist on startup",
+          "title": "Auto Migrate",
+          "type": "boolean"
+        }
+      },
+      "title": "PipelineConfig",
+      "type": "object"
+    },
+    "StorageConfig": {
+      "description": "Immutable raw document byte store settings.",
+      "properties": {
+        "raw_storage_dir": {
+          "default": "./raw_store",
+          "description": "Filesystem root where raw original documents and sha256 checksums are stored",
+          "title": "Raw Storage Dir",
+          "type": "string"
+        },
+        "verify_on_read": {
+          "default": false,
+          "description": "Validate content against sha256 sidecar file on read",
+          "title": "Verify On Read",
+          "type": "boolean"
+        },
+        "backend_type": {
+          "default": "local",
+          "description": "Storage provider (e.g. local | s3 | gcs)",
+          "title": "Backend Type",
+          "type": "string"
+        }
+      },
+      "title": "StorageConfig",
+      "type": "object"
+    }
+  },
+  "description": "Master configuration class representing the full `config.json` schema.",
+  "properties": {
+    "app": {
+      "$ref": "#/$defs/AppConfig"
+    },
+    "database": {
+      "$ref": "#/$defs/DatabaseConfig"
+    },
+    "storage": {
+      "$ref": "#/$defs/StorageConfig"
+    },
+    "parser": {
+      "$ref": "#/$defs/ParserConfig"
+    },
+    "chunking": {
+      "$ref": "#/$defs/ChunkingConfigModel"
+    },
+    "pipeline": {
+      "$ref": "#/$defs/PipelineConfig"
+    },
+    "logging": {
+      "$ref": "#/$defs/LoggingConfig"
+    }
+  },
+  "title": "Settings",
+  "type": "object"
+}

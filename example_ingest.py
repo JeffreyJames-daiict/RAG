@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from sqlalchemy import func, select
 
 from rag.connectors.local_file import LocalFileConnector
+from rag.core.config import get_settings
 from rag.core.database import DatabaseManager
 from rag.core.db_models import Chunk, Document, DocumentVersion
 from rag.core.migrate import run_migrations
@@ -63,24 +64,32 @@ def print_discovery_diff(report):
 
 
 def main():
-    load_dotenv()
+    # 1. Load centralized configuration from config.json
+    settings = get_settings()
+    print(settings.summary())
+
     data_dir = Path(__file__).resolve().parent / "data"
     print(f"📁 Target data folder: {data_dir}")
 
-    # 1. Initialize connector, raw storage backend, and database
+    # 2. Initialize connector, raw storage backend, and database
     connector = LocalFileConnector(base_dir=data_dir, recursive=True)
     connector.validate_connection()
 
-    db_url = os.getenv("DATABASE_URL", "sqlite:///rag.db")
-    raw_storage_dir = os.getenv("RAW_STORAGE_DIR", "./raw_store")
-    raw_store = LocalRawStorageBackend(base_dir=raw_storage_dir)
+    raw_store = LocalRawStorageBackend(
+        base_dir=settings.storage.raw_storage_dir,
+        verify_on_read=settings.storage.verify_on_read,
+    )
 
-    print(f"🗄️  Database Target:    {db_url.split('@')[-1] if '@' in db_url else db_url}")
-    print(f"💾  Raw Storage Dir:    {Path(raw_storage_dir).resolve()}")
+    db_manager = DatabaseManager(
+        db_url=settings.database.url,
+        pool_size=settings.database.pool_size,
+        max_overflow=settings.database.max_overflow,
+        echo=settings.database.echo,
+    )
 
-    db_manager = DatabaseManager(db_url=db_url)
-    # Ensure all tables exist (documents, chunks, embeddings, errors ...)
-    run_migrations(db_manager)
+    # Ensure all tables exist if configured
+    if settings.pipeline.auto_migrate:
+        run_migrations(db_manager)
 
     pipeline = IngestionPipeline(db_manager=db_manager, raw_storage=raw_store)
     pipeline.register_connector("local", connector)
@@ -156,7 +165,12 @@ def main():
     print("\n" + "=" * 60)
     print(" 📄 STEP 4: PARSE & CHUNK")
     print("=" * 60)
-    config = ChunkingConfig(chunk_size=512, chunk_overlap=64)
+    config = ChunkingConfig(
+        chunk_size=settings.chunking.chunk_size,
+        chunk_overlap=settings.chunking.chunk_overlap,
+        chunking_version=settings.chunking.chunking_version,
+        encoding_model=settings.chunking.encoding_model,
+    )
     chunk_results = pipeline.parse_and_chunk("local", chunking_config=config)
 
     total_chunks = sum(chunk_results.values())

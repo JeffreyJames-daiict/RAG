@@ -28,11 +28,13 @@ from rag.core.models import (
 )
 from rag.parsing import ChunkingConfig, PDFParser, RecursiveTextChunker
 from rag.storage.base import RawStorageBackend
+from rag.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# MIME types supported by the PDF parser
-_PDF_MIME_TYPES = {"application/pdf", "application/x-pdf"}
+# MIME types supported by the PDF parser — read from central config
+_settings = get_settings()
+_PDF_MIME_TYPES: frozenset = _settings.pdf_supported_mime_types
 
 
 def _normalize_utc(dt: Optional[datetime]) -> Optional[datetime]:
@@ -547,7 +549,7 @@ class IngestionPipeline:
         self,
         connector_name: str,
         chunking_config: Optional[ChunkingConfig] = None,
-        tenant_id: str = "default",
+        tenant_id: Optional[str] = None,
         force_reparse: bool = False,
     ) -> Dict[str, int]:
         """Parse and chunk all FETCHED documents for a connector.
@@ -556,7 +558,7 @@ class IngestionPipeline:
         decoupled from ingestion so you can re-parse without re-fetching.
 
         For each document with status FETCHED (or PARSED/CHUNKED if force_reparse):
-          1. Re-reads raw bytes from the connector.
+          1. Reads raw bytes from the immutable raw store (falls back to connector).
           2. Parses text using PDFParser (PyMuPDF).
           3. Chunks text using RecursiveTextChunker (token-aware, recursive).
           4. Deletes existing chunks for this document+version (idempotent).
@@ -566,13 +568,16 @@ class IngestionPipeline:
 
         Args:
             connector_name:   Name of the registered connector to pull bytes from.
-            chunking_config:  Override default ChunkingConfig (512 tok / 64 overlap).
-            tenant_id:        Tenant scope for the query.
+            chunking_config:  Override ChunkingConfig (defaults to values from Settings).
+            tenant_id:        Tenant scope. Defaults to ``settings.default_tenant_id``.
             force_reparse:    If True, re-parse PARSED and CHUNKED docs too.
 
         Returns:
             Dict mapping document_id → number of chunks created.
         """
+        cfg = get_settings()
+        tenant_id = tenant_id or cfg.default_tenant_id
+
         connector = self.get_connector(connector_name)
         parser = PDFParser()
         chunker = RecursiveTextChunker(chunking_config or ChunkingConfig())

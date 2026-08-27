@@ -30,6 +30,20 @@ from rag.core.exceptions import (
         IngestionPipelineError,
     )
 
+from rag.core.config import (
+    AppConfig,
+    ChunkingConfigModel,
+    DatabaseConfig,
+    LoggingConfig,
+    ParserConfig,
+    PipelineConfig,
+    Settings,
+    StorageConfig,
+    generate_json_schema,
+    get_settings,
+    load_settings,
+)
+
 __all__ = [
     "SourceType",
     "DocumentStatus",
@@ -54,4 +68,16 @@ __all__ = [
     "AuthenticationError",
     "RateLimitError",
     "IngestionPipelineError",
+    "AppConfig",
+    "DatabaseConfig",
+    "StorageConfig",
+    "ParserConfig",
+    "ChunkingConfigModel",
+    "PipelineConfig",
+    "LoggingConfig",
+    "Settings",
+    "get_settings",
+    "load_settings",
+    "generate_json_schema",
 ]
+

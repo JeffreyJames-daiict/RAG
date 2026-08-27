@@ -1,0 +1,43 @@
+{
+  "$schema": "./config.schema.json",
+  "app": {
+    "name": "Enterprise RAG Pipeline",
+    "version": "0.1.0",
+    "env": "development"
+  },
+  "database": {
+    "url": "${DATABASE_URL:-postgresql://rag_user:rag_password_123@127.0.0.1:5432/rag}",
+    "pool_size": 5,
+    "max_overflow": 10,
+    "echo": false
+  },
+  "storage": {
+    "raw_storage_dir": "${RAW_STORAGE_DIR:-./raw_store}",
+    "verify_on_read": false,
+    "backend_type": "local"
+  },
+  "parser": {
+    "version": "pymupdf-v1.0",
+    "extract_images": false,
+    "supported_mime_types": [
+      "application/pdf",
+      "application/x-pdf"
+    ]
+  },
+  "chunking": {
+    "chunk_size": 512,
+    "chunk_overlap": 64,
+    "chunking_version": "v1.0",
+    "encoding_model": "cl100k_base"
+  },
+  "pipeline": {
+    "default_tenant_id": "default",
+    "handle_deletions": true,
+    "force_fetch": false,
+    "auto_migrate": true
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  }
+}
