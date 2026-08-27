@@ -24,6 +24,7 @@ except ImportError:
 
 from rag.parsing.models import ParsedDocument, ParsedPage
 from rag.parsing.chunker import ChunkingConfig, RecursiveTextChunker
+from rag.parsing.pdf_parser import PDFParser
 from rag.core.models import ChunkSchema
 
 
@@ -70,7 +71,7 @@ class TestPDFParser:
 
         assert result.num_pages == 1
         assert "Hello" in result.pages[0].text
-        assert result.parser_version == "pymupdf-v1.0"
+        assert result.parser_version == PDFParser.PARSER_VERSION
 
     def test_parse_multi_page_pdf(self):
         texts = ["Page one content.", "Page two content.", "Page three content."]

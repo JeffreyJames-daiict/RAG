@@ -8,6 +8,7 @@ __pycache__/
 
 data/
 venv/
+raw_store/
 
 # Distribution / packaging
 .Python

@@ -26,7 +26,7 @@ from rag.core.models import (
     SourceType,
     SyncSummary,
 )
-from rag.parsing import ChunkingConfig, PDFParser, RecursiveTextChunker
+from rag.parsing import ChunkingConfig, PDFParser, RecursiveTextChunker, TableChunker
 from rag.storage.base import RawStorageBackend
 from rag.core.config import get_settings
 
@@ -579,8 +579,15 @@ class IngestionPipeline:
         tenant_id = tenant_id or cfg.default_tenant_id
 
         connector = self.get_connector(connector_name)
-        parser = PDFParser()
-        chunker = RecursiveTextChunker(chunking_config or ChunkingConfig())
+        parser = PDFParser(extract_tables=cfg.table.enabled, table_config=cfg.table)
+        text_chunker = RecursiveTextChunker(chunking_config or ChunkingConfig())
+        effective_chunk_size = (chunking_config.chunk_size if chunking_config else cfg.chunking.chunk_size)
+        table_chunker = TableChunker(
+            table_config=cfg.table,
+            encoding_model=cfg.chunking.encoding_model,
+            max_tokens_per_chunk=effective_chunk_size,
+            chunking_version=cfg.chunking.chunking_version,
+        )
 
         # Determine which statuses to process
         target_statuses = [DocumentStatus.FETCHED.value]
@@ -608,13 +615,12 @@ class IngestionPipeline:
 
                 try:
                     # ── Step 1: Resolve raw bytes ─────────────────────────────
-                    # Prefer immutable raw store; fall back to live connector.
                     raw_bytes = self._read_raw_or_fetch(
                         doc=doc,
                         connector=connector,
                     )
 
-                    # ── Step 2: Parse ─────────────────────────────────────────
+                    # ── Step 2: Parse (Text + Tables) ─────────────────────────
                     if doc.mime_type not in _PDF_MIME_TYPES:
                         logger.warning(
                             "Skipping '%s': MIME type '%s' is not supported by PDFParser.",
@@ -628,12 +634,36 @@ class IngestionPipeline:
 
                     parsed = parser.parse(raw_bytes, filename=label)
 
-                    # ── Step 3: Chunk ─────────────────────────────────────────
-                    chunk_schemas = chunker.chunk(
+                    # ── Step 3: Chunk Text & Tables ───────────────────────────
+                    # 3a. Plain text chunks
+                    all_chunks: List[ChunkSchema] = []
+                    text_chunks = text_chunker.chunk(
                         parsed_doc=parsed,
                         document_id=doc_id,
                         version=doc.version,
                     )
+                    for tc in text_chunks:
+                        if "chunk_type" not in tc.metadata:
+                            tc.metadata["chunk_type"] = "text"
+                    all_chunks.extend(text_chunks)
+
+                    # 3b. Table chunks (if table processing enabled)
+                    table_chunk_count = 0
+                    if cfg.table.enabled and parsed.tables:
+                        for tab in parsed.tables:
+                            t_chunks = table_chunker.chunk_table(
+                                table=tab,
+                                document_id=doc_id,
+                                version=doc.version,
+                                document_title=label,
+                                starting_chunk_index=len(all_chunks),
+                            )
+                            all_chunks.extend(t_chunks)
+                            table_chunk_count += len(t_chunks)
+
+                    # 3c. Normalize sequential chunk_index
+                    for idx, c in enumerate(all_chunks):
+                        c.chunk_index = idx
 
                     # ── Step 4: Delete existing chunks (idempotent) ───────────
                     session.execute(
@@ -644,7 +674,7 @@ class IngestionPipeline:
                     )
 
                     # ── Step 5: Bulk-insert new chunks ────────────────────────
-                    for cs in chunk_schemas:
+                    for cs in all_chunks:
                         db_chunk = Chunk(
                             chunk_id=str(cs.chunk_id),
                             document_id=doc_id,
@@ -672,10 +702,12 @@ class IngestionPipeline:
                     doc.error = None
                     doc.updated_at = datetime.now(timezone.utc)
 
-                    results[doc_id] = len(chunk_schemas)
+                    results[doc_id] = len(all_chunks)
                     logger.info(
-                        "✅ Parsed & chunked '%s' (doc %s): %d chunks, %d pages",
-                        label, doc_id, len(chunk_schemas), parsed.num_pages,
+                        "✅ Parsed & chunked '%s' (doc %s): %d total chunks "
+                        "(%d text, %d table chunks across %d tables, %d pages)",
+                        label, doc_id, len(all_chunks),
+                        len(text_chunks), table_chunk_count, len(parsed.tables), parsed.num_pages,
                     )
 
                 except Exception as exc:

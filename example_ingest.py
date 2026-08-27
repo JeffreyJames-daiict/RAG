@@ -199,18 +199,57 @@ def main():
             print(f"   • Chunks:  {chunk_count}")
 
             if chunk_count > 0:
-                # Show first 2 chunks as preview
-                preview_chunks = session.execute(
+                all_doc_chunks = session.execute(
                     select(Chunk)
                     .where(Chunk.document_id == doc.document_id, Chunk.version == doc.version)
                     .order_by(Chunk.chunk_index)
-                    .limit(2)
                 ).scalars().all()
-                for ch in preview_chunks:
-                    preview_text = ch.text[:120].replace("\n", " ")
+
+                text_count = sum(1 for c in all_doc_chunks if c.chunk_metadata.get("chunk_type") == "text")
+                table_count = sum(1 for c in all_doc_chunks if c.chunk_metadata.get("chunk_type") == "table")
+                summary_count = sum(1 for c in all_doc_chunks if c.chunk_metadata.get("chunk_type") == "table_summary")
+
+                print(f"   • Breakdown: {text_count} text, {table_count} table, {summary_count} table_summary")
+
+                for ch in all_doc_chunks[:4]:
+                    ch_type = ch.chunk_metadata.get("chunk_type", "text")
+                    type_badge = {"table": "📊 [TABLE]", "table_summary": "📋 [TABLE_SUMMARY]", "text": "📝 [TEXT]"}.get(ch_type, "📄 [CHUNK]")
+                    preview_text = ch.text[:100].replace("\n", " ")
                     tokens = ch.chunk_metadata.get("token_count", "?")
-                    print(f"     ↳ [Chunk {ch.chunk_index}] pg{ch.page} | {tokens} tok | {preview_text!r}...")
+                    extra = ""
+                    if ch_type == "table":
+                        r_start = ch.chunk_metadata.get("row_start", "?")
+                        r_end = ch.chunk_metadata.get("row_end", "?")
+                        extra = f" | Rows {r_start}-{r_end}"
+                    print(f"     ↳ {type_badge} #{ch.chunk_index} pg{ch.page} ({tokens} tok{extra}) | {preview_text!r}...")
+
+    # ── Step 6: Table-Aware Retrieval Demo ────────────────────────────────────
+    print("\n" + "=" * 60)
+    print(" 🔍 STEP 6: TABLE-AWARE RETRIEVAL DEMO")
+    print("=" * 60)
+    from rag.retrieval import RetrievalFilter, TableAwareRetriever
+    retriever = TableAwareRetriever(db_manager)
+
+    test_queries = [
+        ("Calendar types and formats", RetrievalFilter(chunk_type="table")),
+        ("Photo Mug options", RetrievalFilter()),
+    ]
+
+    for q_text, q_filter in test_queries:
+        filter_label = f" (filter: chunk_type={q_filter.chunk_type})" if q_filter.chunk_type else " (all chunks)"
+        print(f"\n🔎 Query: '{q_text}'{filter_label}")
+        results = retriever.search(q_text, retrieval_filter=q_filter, top_k=2)
+        if not results:
+            print("   (No matching chunks found)")
+        for res in results:
+            type_tag = f"[{res.chunk_type.upper()}]"
+            print(f"   ✓ Score {res.score:.2f} | {type_tag} Doc: {res.document_id[:8]}... Chunk #{res.chunk_index} (Page {res.page})")
+            print(f"     Text snippet: {res.text[:130].replace(chr(10), ' ')}...")
+            if res.table_id:
+                siblings = retriever.expand_parent_table(res.table_id, res.document_id)
+                print(f"     ↳ Parent Table Expansion: Table '{res.table_id}' has {len(siblings)} related chunk(s)")
 
 
 if __name__ == "__main__":
     main()
+

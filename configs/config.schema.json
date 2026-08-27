@@ -193,6 +193,100 @@
       },
       "title": "StorageConfig",
       "type": "object"
+    },
+    "TableConfig": {
+      "description": "Configuration for multi-table detection, serialization, and chunking.",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Enable structured table extraction and processing",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "max_rows_per_chunk": {
+          "default": 15,
+          "description": "Max rows grouped into a single table chunk",
+          "maximum": 500,
+          "minimum": 1,
+          "title": "Max Rows Per Chunk",
+          "type": "integer"
+        },
+        "serialization_strategy": {
+          "default": "hybrid",
+          "description": "Table serialization format: hybrid | markdown | row_based | json",
+          "title": "Serialization Strategy",
+          "type": "string"
+        },
+        "summary_enabled": {
+          "default": true,
+          "description": "Generate a table-level summary chunk for semantic search",
+          "title": "Summary Enabled",
+          "type": "boolean"
+        },
+        "parent_child_enabled": {
+          "default": true,
+          "description": "Maintain parent_id linking child chunks to parent table",
+          "title": "Parent Child Enabled",
+          "type": "boolean"
+        },
+        "wide_table_threshold": {
+          "default": 8,
+          "description": "Column count threshold for wide table column grouping",
+          "minimum": 2,
+          "title": "Wide Table Threshold",
+          "type": "integer"
+        },
+        "validation_enabled": {
+          "default": true,
+          "description": "Run structural and consistency checks on extracted tables",
+          "title": "Validation Enabled",
+          "type": "boolean"
+        },
+        "multipage_continuation_enabled": {
+          "default": true,
+          "description": "Detect and stitch multi-page table continuations into a unified table element",
+          "title": "Multipage Continuation Enabled",
+          "type": "boolean"
+        },
+        "continuation_confidence_threshold": {
+          "default": 0.85,
+          "description": "Minimum confidence score required to merge adjacent page tables",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Continuation Confidence Threshold",
+          "type": "number"
+        },
+        "cell_inheritance_enabled": {
+          "default": true,
+          "description": "Forward-fill empty category cells in hierarchical row structures",
+          "title": "Cell Inheritance Enabled",
+          "type": "boolean"
+        },
+        "hierarchical_headers_enabled": {
+          "default": true,
+          "description": "Detect and normalize multi-level/hierarchical header rows into composite column names",
+          "title": "Hierarchical Headers Enabled",
+          "type": "boolean"
+        },
+        "parent_expansion_neighbor_rows": {
+          "default": 10,
+          "description": "Number of neighboring rows included before and after a matched chunk during parent expansion",
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Parent Expansion Neighbor Rows",
+          "type": "integer"
+        },
+        "max_expansion_rows": {
+          "default": 50,
+          "description": "Hard upper ceiling on total rows returned during parent table expansion",
+          "maximum": 500,
+          "minimum": 1,
+          "title": "Max Expansion Rows",
+          "type": "integer"
+        }
+      },
+      "title": "TableConfig",
+      "type": "object"
     }
   },
   "description": "Master configuration class representing the full `config.json` schema.",
@@ -211,6 +305,9 @@
     },
     "chunking": {
       "$ref": "#/$defs/ChunkingConfigModel"
+    },
+    "table": {
+      "$ref": "#/$defs/TableConfig"
     },
     "pipeline": {
       "$ref": "#/$defs/PipelineConfig"

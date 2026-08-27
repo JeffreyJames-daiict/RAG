@@ -125,6 +125,51 @@ class ChunkingConfigModel(BaseModel):
         return self
 
 
+class TableConfig(BaseModel):
+    """Configuration for multi-table detection, serialization, and chunking."""
+    enabled: bool = Field(default=True, description="Enable structured table extraction and processing")
+    max_rows_per_chunk: int = Field(default=15, ge=1, le=500, description="Max rows grouped into a single table chunk")
+    serialization_strategy: str = Field(
+        default="hybrid",
+        description="Table serialization format: hybrid | markdown | row_based | json"
+    )
+    summary_enabled: bool = Field(default=True, description="Generate a table-level summary chunk for semantic search")
+    parent_child_enabled: bool = Field(default=True, description="Maintain parent_id linking child chunks to parent table")
+    wide_table_threshold: int = Field(default=8, ge=2, description="Column count threshold for wide table column grouping")
+    validation_enabled: bool = Field(default=True, description="Run structural and consistency checks on extracted tables")
+    multipage_continuation_enabled: bool = Field(
+        default=True,
+        description="Detect and stitch multi-page table continuations into a unified table element"
+    )
+    continuation_confidence_threshold: float = Field(
+        default=0.85,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence score required to merge adjacent page tables"
+    )
+    cell_inheritance_enabled: bool = Field(
+        default=True,
+        description="Forward-fill empty category cells in hierarchical row structures"
+    )
+    hierarchical_headers_enabled: bool = Field(
+        default=True,
+        description="Detect and normalize multi-level/hierarchical header rows into composite column names"
+    )
+    parent_expansion_neighbor_rows: int = Field(
+        default=10,
+        ge=0,
+        le=100,
+        description="Number of neighboring rows included before and after a matched chunk during parent expansion"
+    )
+    max_expansion_rows: int = Field(
+        default=50,
+        ge=1,
+        le=500,
+        description="Hard upper ceiling on total rows returned during parent table expansion"
+    )
+
+
+
 class PipelineConfig(BaseModel):
     """Ingestion and sync pipeline behavior."""
     default_tenant_id: str = Field(default="default", description="Tenant key when omitted in payloads")
@@ -152,8 +197,10 @@ class Settings(BaseModel):
     storage: StorageConfig = Field(default_factory=StorageConfig)
     parser: ParserConfig = Field(default_factory=ParserConfig)
     chunking: ChunkingConfigModel = Field(default_factory=ChunkingConfigModel)
+    table: TableConfig = Field(default_factory=TableConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+
 
     # Convenient shortcuts
     @property
