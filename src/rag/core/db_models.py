@@ -101,6 +101,16 @@ class Document(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         doc="Timestamp of last update or status change",
     )
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        doc="Timestamp when document was soft deleted from source",
+    )
+    error: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        doc="Last failure reason or error message encountered during pipeline execution",
+    )
 
     # Relationships
     versions: Mapped[List["DocumentVersion"]] = relationship(
@@ -113,6 +123,12 @@ class Document(Base):
         "Chunk",
         back_populates="document",
         cascade="all, delete-orphan",
+    )
+    errors: Mapped[List["PipelineError"]] = relationship(
+        "PipelineError",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="PipelineError.created_at.desc()",
     )
 
     __table_args__ = (
@@ -287,3 +303,72 @@ class Embedding(Base):
         "Chunk",
         back_populates="embeddings",
     )
+
+
+class PipelineError(Base):
+    """Table: errors
+
+    Stores detailed error logs and failure reasons when pipeline operations fail.
+    """
+    __tablename__ = "errors"
+
+    error_id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+        doc="Unique identifier for the error record",
+    )
+    document_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("documents.document_id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+        doc="Foreign key to document if error is associated with a specific document",
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        default="default",
+        index=True,
+        doc="Tenant identifier",
+    )
+    source_uri: Mapped[Optional[str]] = mapped_column(
+        String(2048),
+        nullable=True,
+        doc="Source URI of document or resource that caused error",
+    )
+    stage: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="PIPELINE",
+        index=True,
+        doc="Pipeline stage where error occurred (DISCOVERY, FETCH, PARSE, CHUNK, EMBED)",
+    )
+    error_type: Mapped[str] = mapped_column(
+        String(128),
+        nullable=False,
+        doc="Exception class name or category",
+    )
+    error_message: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        doc="Error message or reason",
+    )
+    stack_trace: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        doc="Detailed stack trace for debugging",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        doc="Timestamp when error occurred",
+    )
+
+    # Relationships
+    document: Mapped[Optional["Document"]] = relationship(
+        "Document",
+        back_populates="errors",
+    )
+

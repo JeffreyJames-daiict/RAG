@@ -23,7 +23,16 @@ class DocumentStatus(str, Enum):
     PARSED = "PARSED"
     CHUNKED = "CHUNKED"
     INDEXED = "INDEXED"
+    DELETED = "DELETED"
     FAILED = "FAILED"
+
+
+class DocumentChangeType(str, Enum):
+    """Classification of document change status during discovery."""
+    NEW = "NEW"
+    CHANGED = "CHANGED"
+    UNCHANGED = "UNCHANGED"
+    DELETED = "DELETED"
 
 
 class DocumentDescriptor(BaseModel):
@@ -50,9 +59,66 @@ class RawDocumentPayload(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
+class DiscoveredItem(BaseModel):
+    """Represents a discovered document and its evaluated change state."""
+    descriptor: DocumentDescriptor
+    change_type: DocumentChangeType
+    reason: str
+    existing_document_id: Optional[str] = None
+    existing_version: Optional[int] = None
+    existing_hash: Optional[str] = None
+
+
+class DeletionCandidate(BaseModel):
+    """Represents a tracked document missing from discovery to be marked deleted."""
+    document_id: str
+    source_uri: str
+    filename: str
+    tenant_id: str
+    source: SourceType
+    last_known_version: int
+
+
+class DiscoveryReport(BaseModel):
+    """Comprehensive discovery differential classifying all documents."""
+    tenant_id: str
+    source_type: SourceType
+    discovered_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    total_discovered: int = 0
+    new_items: List[DiscoveredItem] = Field(default_factory=list)
+    changed_items: List[DiscoveredItem] = Field(default_factory=list)
+    unchanged_items: List[DiscoveredItem] = Field(default_factory=list)
+    deleted_items: List[DeletionCandidate] = Field(default_factory=list)
+
+    @property
+    def total_existing(self) -> int:
+        """Total documents that already existed in DB prior to sync."""
+        return len(self.unchanged_items) + len(self.changed_items) + len(self.deleted_items)
+
+    @property
+    def summary_counts(self) -> Dict[str, int]:
+        return {
+            "total_discovered": self.total_discovered,
+            "new": len(self.new_items),
+            "changed": len(self.changed_items),
+            "unchanged": len(self.unchanged_items),
+            "deleted": len(self.deleted_items),
+        }
+
+
 # ----------------------------------------------------------------------
-# 47. Production Data Model Schemas
+# Production Data Model Schemas
 # ----------------------------------------------------------------------
+
+class PipelineStage(str, Enum):
+    """Stages of the RAG pipeline."""
+    DISCOVERY = "DISCOVERY"
+    FETCH = "FETCH"
+    PARSE = "PARSE"
+    CHUNK = "CHUNK"
+    EMBED = "EMBED"
+    PIPELINE = "PIPELINE"
+
 
 class DocumentSchema(BaseModel):
     """Schema representing the `documents` table record."""
@@ -67,6 +133,23 @@ class DocumentSchema(BaseModel):
     status: DocumentStatus = DocumentStatus.DISCOVERED
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    deleted_at: Optional[datetime] = None
+    error: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PipelineErrorSchema(BaseModel):
+    """Schema representing the `errors` table record."""
+    error_id: UUID = Field(default_factory=uuid4)
+    document_id: Optional[UUID] = None
+    tenant_id: str = "default"
+    source_uri: Optional[str] = None
+    stage: PipelineStage = PipelineStage.PIPELINE
+    error_type: str
+    error_message: str
+    stack_trace: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -113,7 +196,13 @@ class SyncSummary(BaseModel):
     """Summary metrics of a connector ingestion run."""
     source_type: SourceType
     discovered_count: int = 0
+    new_count: int = 0
+    changed_count: int = 0
+    unchanged_count: int = 0
+    deleted_count: int = 0
     fetched_count: int = 0
     skipped_count: int = 0
     failed_count: int = 0
     errors: List[str] = Field(default_factory=list)
+    discovery_report: Optional[DiscoveryReport] = None
+
