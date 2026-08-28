@@ -79,17 +79,21 @@ class DatabaseConfig(BaseModel):
 
 class StorageConfig(BaseModel):
     """Immutable raw document byte store settings."""
+    backend_type: str = Field(
+        default="database",
+        description="Storage provider (e.g. database | local | s3)"
+    )
+    raw_schema: str = Field(
+        default="raw",
+        description="Database schema name for raw document payload storage"
+    )
     raw_storage_dir: str = Field(
         default="./raw_store",
-        description="Filesystem root where raw original documents and sha256 checksums are stored"
+        description="Filesystem root where raw original documents are stored (when backend_type=local)"
     )
     verify_on_read: bool = Field(
-        default=False,
-        description="Validate content against sha256 sidecar file on read"
-    )
-    backend_type: str = Field(
-        default="local",
-        description="Storage provider (e.g. local | s3 | gcs)"
+        default=True,
+        description="Validate content against sha256 checksum on read"
     )
 
     @property

@@ -222,6 +222,8 @@ class TestParseAndChunkIntegration:
         from rag.ingestion.pipeline import IngestionPipeline
 
         db_manager = DatabaseManager(db_url="sqlite:///:memory:")
+        from rag.core.migrate import ensure_raw_schema
+        ensure_raw_schema(db_manager.engine)
         Base.metadata.create_all(bind=db_manager.engine)
         pipeline = IngestionPipeline(db_manager=db_manager)
         return pipeline, db_manager

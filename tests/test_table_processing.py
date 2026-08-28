@@ -225,6 +225,8 @@ class TestTableAwareRetriever:
     @pytest.fixture
     def setup_retriever(self):
         db = DatabaseManager("sqlite:///:memory:")
+        from rag.core.migrate import ensure_raw_schema
+        ensure_raw_schema(db.engine)
         Base.metadata.create_all(db.engine)
 
         doc_id = str(uuid.uuid4())

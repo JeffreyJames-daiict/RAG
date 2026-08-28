@@ -172,23 +172,29 @@
     "StorageConfig": {
       "description": "Immutable raw document byte store settings.",
       "properties": {
+        "backend_type": {
+          "default": "database",
+          "description": "Storage provider (e.g. database | local | s3)",
+          "title": "Backend Type",
+          "type": "string"
+        },
+        "raw_schema": {
+          "default": "raw",
+          "description": "Database schema name for raw document payload storage",
+          "title": "Raw Schema",
+          "type": "string"
+        },
         "raw_storage_dir": {
           "default": "./raw_store",
-          "description": "Filesystem root where raw original documents and sha256 checksums are stored",
+          "description": "Filesystem root where raw original documents are stored (when backend_type=local)",
           "title": "Raw Storage Dir",
           "type": "string"
         },
         "verify_on_read": {
-          "default": false,
-          "description": "Validate content against sha256 sidecar file on read",
+          "default": true,
+          "description": "Validate content against sha256 checksum on read",
           "title": "Verify On Read",
           "type": "boolean"
-        },
-        "backend_type": {
-          "default": "local",
-          "description": "Storage provider (e.g. local | s3 | gcs)",
-          "title": "Backend Type",
-          "type": "string"
         }
       },
       "title": "StorageConfig",

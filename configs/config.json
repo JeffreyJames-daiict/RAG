@@ -12,9 +12,9 @@
     "echo": false
   },
   "storage": {
-    "raw_storage_dir": "${RAW_STORAGE_DIR:-./raw_store}",
-    "verify_on_read": false,
-    "backend_type": "local"
+    "backend_type": "database",
+    "raw_schema": "raw",
+    "verify_on_read": true
   },
   "parser": {
     "version": "pymupdf-v1.0",

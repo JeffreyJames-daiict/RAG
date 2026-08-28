@@ -198,8 +198,10 @@ class TestSaveRaw:
     def _make_pipeline(self, raw_storage=None):
         from rag.core.database import DatabaseManager
         from rag.core.db_models import Base
+        from rag.core.migrate import ensure_raw_schema
         from rag.ingestion.pipeline import IngestionPipeline
         db_manager = DatabaseManager(db_url="sqlite:///:memory:")
+        ensure_raw_schema(db_manager.engine)
         Base.metadata.create_all(bind=db_manager.engine)
         return IngestionPipeline(db_manager=db_manager, raw_storage=raw_storage)
 
@@ -263,7 +265,9 @@ class TestIngestStoresRaw:
 
         pdf_path.write_bytes(pdf_bytes)
 
+        from rag.core.migrate import ensure_raw_schema
         db_manager = DatabaseManager(db_url="sqlite:///:memory:")
+        ensure_raw_schema(db_manager.engine)
         Base.metadata.create_all(bind=db_manager.engine)
         pipeline = IngestionPipeline(db_manager=db_manager, raw_storage=store)
 
@@ -283,3 +287,116 @@ class TestIngestStoresRaw:
             )
             stored_bytes = store.read(ver.raw_location)
             assert stored_bytes == pdf_bytes
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DatabaseRawStorageBackend tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+from rag.core.database import DatabaseManager
+from rag.core.db_models import Base, RawDocumentPayload
+from rag.core.migrate import ensure_raw_schema
+from rag.storage.db_storage import DatabaseRawStorageBackend
+
+
+@pytest.fixture
+def db_store():
+    """A fresh DatabaseRawStorageBackend backed by in-memory SQLite."""
+    db_manager = DatabaseManager(db_url="sqlite:///:memory:")
+    ensure_raw_schema(db_manager.engine)
+    Base.metadata.create_all(bind=db_manager.engine)
+    return DatabaseRawStorageBackend(db_manager, schema_name="raw")
+
+
+class TestDbBackendWrite:
+    def test_write_returns_canonical_key(self, db_store, sample_bytes):
+        key = db_store.write("t1", _rand_id(), 1, "test.pdf", sample_bytes)
+        assert key.startswith("t1/")
+        assert key.endswith("test.pdf")
+
+    def test_write_and_read_roundtrip(self, db_store, sample_bytes):
+        doc_id = _rand_id()
+        key = db_store.write("t1", doc_id, 1, "a.pdf", sample_bytes)
+        assert db_store.read(key) == sample_bytes
+
+    def test_write_immutable_raises_file_exists(self, db_store, sample_bytes):
+        doc_id = _rand_id()
+        db_store.write("t1", doc_id, 1, "a.pdf", sample_bytes)
+        with pytest.raises(FileExistsError, match="already exists"):
+            db_store.write("t1", doc_id, 1, "a.pdf", sample_bytes)
+
+    def test_write_force_overwrite(self, db_store, sample_bytes):
+        doc_id = _rand_id()
+        db_store.write("t1", doc_id, 1, "a.pdf", sample_bytes)
+        new_bytes = b"updated content 123"
+        key = db_store.write("t1", doc_id, 1, "a.pdf", new_bytes, force=True)
+        assert db_store.read(key) == new_bytes
+
+    def test_write_empty_bytes_raises_value_error(self, db_store):
+        with pytest.raises(ValueError, match="empty"):
+            db_store.write("t1", _rand_id(), 1, "a.pdf", b"")
+
+    def test_sha256_integrity_check_on_read(self, db_store, sample_bytes):
+        """Verify SHA-256 computed and stored correctly."""
+        doc_id = _rand_id()
+        key = db_store.write("t1", doc_id, 1, "a.pdf", sample_bytes)
+        # Read should succeed without corruption error
+        result = db_store.read(key)
+        assert result == sample_bytes
+
+
+class TestDbBackendExistsDelete:
+    def test_exists_true_after_write(self, db_store, sample_bytes):
+        key = db_store.write("t1", _rand_id(), 1, "e.pdf", sample_bytes)
+        assert db_store.exists(key) is True
+
+    def test_exists_false_before_write(self, db_store):
+        assert db_store.exists("t1/missing-doc/v1/nope.pdf") is False
+
+    def test_delete_removes_record(self, db_store, sample_bytes):
+        key = db_store.write("t1", _rand_id(), 1, "f.pdf", sample_bytes)
+        db_store.delete(key)
+        assert db_store.exists(key) is False
+
+    def test_delete_missing_raises_file_not_found(self, db_store):
+        with pytest.raises(FileNotFoundError):
+            db_store.delete("t1/ghost/v1/phantom.pdf")
+
+    def test_get_storage_size_bytes(self, db_store, sample_bytes):
+        key = db_store.write("t1", _rand_id(), 1, "h.pdf", sample_bytes)
+        size = db_store.get_storage_size_bytes(key)
+        assert size == len(sample_bytes)
+
+    def test_get_storage_size_bytes_missing_returns_none(self, db_store):
+        assert db_store.get_storage_size_bytes("t1/missing/v1/x.pdf") is None
+
+
+class TestDbBackendPipelineIntegration:
+    """Integration: _save_raw with DatabaseRawStorageBackend."""
+
+    def _make_payload(self, content, filename, source_uri):
+        from rag.core.models import RawDocumentPayload as ModelPayload, DocumentDescriptor, SourceType
+        desc = DocumentDescriptor(
+            source=SourceType.LOCAL_FILE,
+            source_uri=source_uri,
+            filename=filename,
+            mime_type="application/pdf",
+        )
+        return ModelPayload(
+            descriptor=desc,
+            content=content,
+            content_hash=hashlib.sha256(content).hexdigest(),
+        )
+
+    def test_save_raw_with_db_backend(self, db_store, sample_bytes):
+        from rag.ingestion.pipeline import IngestionPipeline
+        db_manager = DatabaseManager(db_url="sqlite:///:memory:")
+        ensure_raw_schema(db_manager.engine)
+        Base.metadata.create_all(bind=db_manager.engine)
+        pipeline = IngestionPipeline(db_manager=db_manager, raw_storage=db_store)
+        payload = self._make_payload(sample_bytes, "x.pdf", "/data/x.pdf")
+        doc_id = _rand_id()
+        key = pipeline._save_raw(payload, doc_id, 1, "default")
+        assert db_store.exists(key)
+        assert db_store.read(key) == sample_bytes
+

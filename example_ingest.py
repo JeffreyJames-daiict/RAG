@@ -17,7 +17,7 @@ from rag.core.db_models import Chunk, Document, DocumentVersion
 from rag.core.migrate import run_migrations
 from rag.ingestion.pipeline import IngestionPipeline
 from rag.parsing import ChunkingConfig
-from rag.storage.local_storage import LocalRawStorageBackend
+from rag.storage import get_storage_backend
 
 
 def print_discovery_diff(report):
@@ -75,17 +75,15 @@ def main():
     connector = LocalFileConnector(base_dir=data_dir, recursive=True)
     connector.validate_connection()
 
-    raw_store = LocalRawStorageBackend(
-        base_dir=settings.storage.raw_storage_dir,
-        verify_on_read=settings.storage.verify_on_read,
-    )
-
+    # Initialize database manager first (raw storage backend needs it)
     db_manager = DatabaseManager(
         db_url=settings.database.url,
         pool_size=settings.database.pool_size,
         max_overflow=settings.database.max_overflow,
         echo=settings.database.echo,
     )
+
+    raw_store = get_storage_backend(settings=settings, db_manager=db_manager)
 
     # Ensure all tables exist if configured
     if settings.pipeline.auto_migrate:
@@ -138,8 +136,8 @@ def main():
                 is_stored = raw_store.exists(raw_loc) if ver.raw_location else False
                 stored_icon = "💾" if is_stored else "🔗"
                 size_str = ""
-                if is_stored:
-                    size_bytes = raw_store.storage_size_bytes(raw_loc)
+                if is_stored and hasattr(raw_store, "get_storage_size_bytes"):
+                    size_bytes = raw_store.get_storage_size_bytes(raw_loc)
                     size_str = f" ({size_bytes:,} bytes)" if size_bytes else ""
                 print(f"     ↳ Version v{ver.version} (hash: {ver.content_hash[:16]}...)")
                 print(f"       {stored_icon} raw_location: {raw_loc}{size_str}")
