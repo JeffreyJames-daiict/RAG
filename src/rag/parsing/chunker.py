@@ -73,13 +73,15 @@ class RecursiveTextChunker:
         parsed_doc: ParsedDocument,
         document_id: str,
         version: int,
+        normalized_doc: Optional[Any] = None,
     ) -> List[ChunkSchema]:
-        """Chunk a ParsedDocument into a list of ChunkSchema objects.
+        """Chunk a ParsedDocument (or NormalizedDocument) into a list of ChunkSchema objects.
 
         Args:
-            parsed_doc:   Output of PDFParser.parse().
-            document_id:  UUID string of the parent document row.
-            version:      Active version number of the document.
+            parsed_doc:      Output of PDFParser.parse().
+            document_id:     UUID string of the parent document row.
+            version:         Active version number of the document.
+            normalized_doc:  Optional NormalizedDocument output from ContentNormalizer.
 
         Returns:
             Ordered list of ChunkSchema ready to be inserted into `chunks`.
@@ -87,15 +89,41 @@ class RecursiveTextChunker:
         chunks: List[ChunkSchema] = []
         chunk_index = 0
 
+        # Build lookup for normalized page blocks if available
+        norm_pages_map = {}
+        if normalized_doc and hasattr(normalized_doc, "pages"):
+            for np in normalized_doc.pages:
+                norm_pages_map[np.page_number] = np
+
         for page in parsed_doc.pages:
-            if not page.text.strip():
+            norm_page = norm_pages_map.get(page.page_number)
+
+            # Determine text to chunk
+            if norm_page and norm_page.normalized_text.strip():
+                text_to_chunk = norm_page.normalized_text
+            else:
+                text_to_chunk = page.text
+
+            if not text_to_chunk.strip():
                 continue
 
             # Determine current section heading (last heading seen on this page)
             section = page.headings[-1] if page.headings else None
 
             # Split this page's text into token-bounded segments
-            page_chunks = self._split_text(page.text)
+            page_chunks = self._split_text(text_to_chunk)
+
+            # Collect normalization audit info if available
+            norm_actions = []
+            quality_flags = []
+            if norm_page:
+                for b in norm_page.active_blocks:
+                    for act in getattr(b, "normalization_actions", []):
+                        if act not in norm_actions:
+                            norm_actions.append(act)
+                    for flag in getattr(b, "quality_flags", []):
+                        if flag not in quality_flags:
+                            quality_flags.append(flag)
 
             for raw_text in page_chunks:
                 clean = raw_text.strip()
@@ -120,6 +148,11 @@ class RecursiveTextChunker:
                     "language_confidence": getattr(page, "language_confidence", 1.0),
                 }
 
+                if norm_actions:
+                    metadata["normalization_actions"] = norm_actions
+                if quality_flags:
+                    metadata["quality_flags"] = quality_flags
+
                 chunks.append(
                     ChunkSchema(
                         chunk_id=uuid.uuid4(),
@@ -136,9 +169,10 @@ class RecursiveTextChunker:
                 chunk_index += 1
 
         logger.info(
-            "Chunked document %s v%d → %d chunks (size=%d tok, overlap=%d tok)",
+            "Chunked document %s v%d → %d chunks (size=%d tok, overlap=%d tok, normalized=%s)",
             document_id, version, len(chunks),
             self.config.chunk_size, self.config.chunk_overlap,
+            bool(normalized_doc),
         )
         return chunks
 

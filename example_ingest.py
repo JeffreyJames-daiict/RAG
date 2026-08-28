@@ -175,7 +175,7 @@ def main():
         chunking_version=settings.chunking.chunking_version,
         encoding_model=settings.chunking.encoding_model,
     )
-    chunk_results = pipeline.parse_and_chunk("local", chunking_config=config)
+    chunk_results = pipeline.parse_and_chunk("local", chunking_config=config, force_reparse=True)
 
     total_chunks = sum(chunk_results.values())
     print(f"\n✅ Parsing complete: {len(chunk_results)} document(s) processed, {total_chunks} total chunks.")

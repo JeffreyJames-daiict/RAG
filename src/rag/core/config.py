@@ -217,6 +217,78 @@ class PipelineConfig(BaseModel):
     auto_migrate: bool = Field(default=True, description="Ensure database tables exist on startup")
 
 
+class NormalizationConfig(BaseModel):
+    """Configuration for the content normalization layer between extraction and chunking."""
+    enabled: bool = Field(
+        default=True,
+        description="Master switch for the normalization layer",
+    )
+    min_text_length: int = Field(
+        default=10,
+        ge=0,
+        description="Drop blocks shorter than this character count",
+    )
+    min_word_count: int = Field(
+        default=3,
+        ge=0,
+        description="Drop blocks with fewer words than this threshold",
+    )
+    ocr_confidence_threshold: float = Field(
+        default=0.60,
+        ge=0.0,
+        le=1.0,
+        description="Flag OCR blocks with confidence below this value as low_confidence",
+    )
+    duplicate_similarity_threshold: float = Field(
+        default=0.85,
+        ge=0.0,
+        le=1.0,
+        description="Character n-gram overlap ratio above which two blocks are considered duplicates",
+    )
+    header_repeat_threshold: int = Field(
+        default=3,
+        ge=2,
+        description="Minimum number of pages on which a pattern must appear to be classified as a header",
+    )
+    footer_repeat_threshold: int = Field(
+        default=3,
+        ge=2,
+        description="Minimum number of pages on which a pattern must appear to be classified as a footer",
+    )
+    max_symbol_ratio: float = Field(
+        default=0.30,
+        ge=0.0,
+        le=1.0,
+        description="Flag blocks where non-alphanumeric symbols exceed this proportion of total characters",
+    )
+    excessive_repetition_threshold: float = Field(
+        default=0.70,
+        ge=0.0,
+        le=1.0,
+        description="Flag blocks where a single character or n-gram accounts for more than this ratio",
+    )
+    unicode_normalization_form: str = Field(
+        default="NFC",
+        description="Unicode normalization form to apply: NFC | NFKC | none",
+    )
+    repair_soft_hyphens: bool = Field(
+        default=True,
+        description="Attempt to rejoin words split by PDF soft hyphens at end-of-line",
+    )
+    remove_headers: bool = Field(
+        default=True,
+        description="Remove detected repetitive page headers",
+    )
+    remove_footers: bool = Field(
+        default=True,
+        description="Remove detected repetitive page footers",
+    )
+    remove_standalone_page_numbers: bool = Field(
+        default=True,
+        description="Remove standalone page number artifacts in extracted text",
+    )
+
+
 class LoggingConfig(BaseModel):
     """Logging format and level."""
     level: str = Field(default="INFO", description="Logging level: DEBUG | INFO | WARNING | ERROR | CRITICAL")
@@ -238,6 +310,7 @@ class Settings(BaseModel):
     chunking: ChunkingConfigModel = Field(default_factory=ChunkingConfigModel)
     table: TableConfig = Field(default_factory=TableConfig)
     ocr: OCRConfig = Field(default_factory=OCRConfig)
+    normalization: NormalizationConfig = Field(default_factory=NormalizationConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 

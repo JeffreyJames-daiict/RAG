@@ -33,6 +33,7 @@ from rag.core.models import (
     SourceType,
     SyncSummary,
 )
+from rag.normalization import ContentNormalizer
 from rag.parsing import ChunkingConfig, PDFParser, RecursiveTextChunker, TableChunker
 from rag.storage.base import RawStorageBackend
 from rag.core.config import get_settings
@@ -587,6 +588,7 @@ class IngestionPipeline:
 
         connector = self.get_connector(connector_name)
         parser = PDFParser(extract_tables=cfg.table.enabled, table_config=cfg.table)
+        normalizer = ContentNormalizer(cfg.normalization)
         text_chunker = RecursiveTextChunker(chunking_config or ChunkingConfig())
         effective_chunk_size = (chunking_config.chunk_size if chunking_config else cfg.chunking.chunk_size)
         table_chunker = TableChunker(
@@ -641,6 +643,13 @@ class IngestionPipeline:
 
                     parsed = parser.parse(raw_bytes, filename=label)
 
+                    # ── Step 2.5: Normalize Content (Native, OCR, Tables) ─────
+                    normalized_doc = normalizer.normalize(
+                        parsed_doc=parsed,
+                        document_id=doc_id,
+                        filename=label,
+                    )
+
                     # ── Step 3: Chunk Text & Tables ───────────────────────────
                     # 3a. Plain text chunks
                     all_chunks: List[ChunkSchema] = []
@@ -648,6 +657,7 @@ class IngestionPipeline:
                         parsed_doc=parsed,
                         document_id=doc_id,
                         version=doc.version,
+                        normalized_doc=normalized_doc,
                     )
                     for tc in text_chunks:
                         if "chunk_type" not in tc.metadata:

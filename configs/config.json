@@ -57,6 +57,22 @@
     "mixed_content_merge": true,
     "iou_overlap_threshold": 0.30
   },
+  "normalization": {
+    "enabled": true,
+    "min_text_length": 10,
+    "min_word_count": 3,
+    "ocr_confidence_threshold": 0.60,
+    "duplicate_similarity_threshold": 0.85,
+    "header_repeat_threshold": 3,
+    "footer_repeat_threshold": 3,
+    "max_symbol_ratio": 0.30,
+    "excessive_repetition_threshold": 0.70,
+    "unicode_normalization_form": "NFC",
+    "repair_soft_hyphens": true,
+    "remove_headers": true,
+    "remove_footers": true,
+    "remove_standalone_page_numbers": true
+  },
   "pipeline": {
     "default_tenant_id": "default",
     "handle_deletions": true,
