@@ -104,10 +104,20 @@ class RecursiveTextChunker:
 
                 token_count = len(self._enc.encode(clean))
                 metadata: Dict[str, Any] = {
+                    "chunk_type": "text",
                     "token_count": token_count,
                     "page": page.page_number,
                     "num_pages": parsed_doc.num_pages,
                     "parser_version": parsed_doc.parser_version,
+                    "content_source": getattr(page, "content_source", "native"),
+                    "ocr_applied": getattr(page, "ocr_applied", False),
+                    "ocr_confidence": getattr(page, "ocr_confidence", None),
+                    "quality_score": getattr(page, "quality_score", None),
+                    "ocr_provider": getattr(page, "ocr_provider", None),
+                    "preprocessing_profile": getattr(page, "preprocessing_profile", None),
+                    "ocr_attempt": getattr(page, "ocr_attempt", 1),
+                    "language": getattr(page, "detected_language", "eng"),
+                    "language_confidence": getattr(page, "language_confidence", 1.0),
                 }
 
                 chunks.append(

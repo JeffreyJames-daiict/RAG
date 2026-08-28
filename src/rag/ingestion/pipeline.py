@@ -13,7 +13,14 @@ from sqlalchemy.orm import Session
 
 from rag.connectors.base import BaseSourceConnector
 from rag.core.database import DatabaseManager
-from rag.core.db_models import Chunk, Document, DocumentVersion, PipelineError
+from rag.core.db_models import (
+    Chunk,
+    ChunkMetadata,
+    Document,
+    DocumentVersion,
+    DocumentVersionMetadata,
+    PipelineError,
+)
 from rag.core.models import (
     DeletionCandidate,
     DiscoveredItem,
@@ -673,22 +680,63 @@ class IngestionPipeline:
                         )
                     )
 
-                    # ── Step 5: Bulk-insert new chunks ────────────────────────
+                    # ── Step 5: Bulk-insert new chunks & relational ChunkMetadata ─
                     for cs in all_chunks:
+                        ch_id_str = str(cs.chunk_id)
+                        meta_dict = cs.metadata or {}
+
                         db_chunk = Chunk(
-                            chunk_id=str(cs.chunk_id),
+                            chunk_id=ch_id_str,
                             document_id=doc_id,
                             version=cs.version,
                             chunk_index=cs.chunk_index,
                             text=cs.text,
                             section=cs.section,
                             page=cs.page,
-                            chunk_metadata=cs.metadata,
+                            chunk_metadata=meta_dict,
                             chunking_version=cs.chunking_version,
                         )
                         session.add(db_chunk)
 
-                    # ── Step 6: Update DocumentVersion.parser_version ─────────
+                        chunk_meta_row = ChunkMetadata(
+                            chunk_id=ch_id_str,
+                            document_id=doc_id,
+                            version=cs.version,
+                            chunk_type=meta_dict.get("chunk_type", "text"),
+                            page=cs.page,
+                            page_start=meta_dict.get("page_start", cs.page),
+                            page_end=meta_dict.get("page_end", cs.page),
+                            token_count=meta_dict.get("token_count", 0),
+                            language=meta_dict.get("language", getattr(parsed, "primary_language", "eng")),
+                            language_confidence=meta_dict.get("language_confidence", 1.0),
+                            content_source=meta_dict.get("content_source", "native"),
+                            quality_score=meta_dict.get("quality_score"),
+                            ocr_applied=meta_dict.get("ocr_applied", False),
+                            ocr_confidence=meta_dict.get("ocr_confidence"),
+                            ocr_provider=meta_dict.get("ocr_provider"),
+                            preprocessing_profile=meta_dict.get("preprocessing_profile"),
+                            ocr_attempt=meta_dict.get("ocr_attempt", 1),
+                            table_id=meta_dict.get("table_id"),
+                            parent_table_id=meta_dict.get("parent_id") or meta_dict.get("table_id"),
+                            row_start=meta_dict.get("row_start"),
+                            row_end=meta_dict.get("row_end"),
+                            total_rows=meta_dict.get("total_rows"),
+                            total_columns=meta_dict.get("total_columns"),
+                            is_continuation=meta_dict.get("is_continuation", False),
+                            validation_status=meta_dict.get("validation_status", "valid"),
+                            serialization_strategy=meta_dict.get("serialization_strategy", "hybrid"),
+                            extra_attributes={k: v for k, v in meta_dict.items() if k not in {
+                                "chunk_type", "page", "page_start", "page_end", "token_count",
+                                "language", "language_confidence", "content_source", "quality_score",
+                                "ocr_applied", "ocr_confidence", "ocr_provider", "preprocessing_profile",
+                                "ocr_attempt", "table_id", "parent_id", "row_start", "row_end",
+                                "total_rows", "total_columns", "is_continuation", "validation_status",
+                                "serialization_strategy",
+                            }},
+                        )
+                        session.add(chunk_meta_row)
+
+                    # ── Step 6: Update DocumentVersion & DocumentVersionMetadata ─
                     ver_stmt = select(DocumentVersion).where(
                         DocumentVersion.document_id == doc_id,
                         DocumentVersion.version == doc.version,
@@ -696,6 +744,80 @@ class IngestionPipeline:
                     doc_ver = session.execute(ver_stmt).scalar_one_or_none()
                     if doc_ver:
                         doc_ver.parser_version = parsed.parser_version
+
+                        # Aggregate page quality scores & metrics
+                        page_scores = []
+                        for p in parsed.pages:
+                            page_scores.append({
+                                "page_number": p.page_number,
+                                "content_source": getattr(p, "content_source", "native"),
+                                "detected_language": getattr(p, "detected_language", "eng"),
+                                "language_confidence": getattr(p, "language_confidence", 1.0),
+                                "ocr_applied": getattr(p, "ocr_applied", False),
+                                "quality_score": getattr(p, "quality_score", None),
+                                "ocr_confidence": getattr(p, "ocr_confidence", None),
+                                "ocr_provider": getattr(p, "ocr_provider", None),
+                                "preprocessing_profile": getattr(p, "preprocessing_profile", None),
+                                "ocr_attempt": getattr(p, "ocr_attempt", 1),
+                            })
+
+                        valid_qualities = [p.quality_score for p in parsed.pages if getattr(p, "quality_score", None) is not None]
+                        avg_quality = sum(valid_qualities) / len(valid_qualities) if valid_qualities else 1.0
+
+                        valid_confs = [p.ocr_confidence for p in parsed.pages if getattr(p, "ocr_confidence", None) is not None]
+                        avg_ocr_conf = sum(valid_confs) / len(valid_confs) if valid_confs else None
+
+                        tab_diag = parsed.table_diagnostics or {}
+                        ocr_diag_map = getattr(parsed, "ocr_diagnostics", {})
+
+                        doc_ver.metadata_snapshot = {
+                            "num_pages": parsed.num_pages,
+                            "primary_language": getattr(parsed, "primary_language", "eng"),
+                            "languages_detected": getattr(parsed, "languages_detected", ["eng"]),
+                            "total_chunks": len(all_chunks),
+                            "text_chunks": len(text_chunks),
+                            "table_chunks": table_chunk_count,
+                            "avg_quality_score": round(avg_quality, 4),
+                            "avg_ocr_confidence": round(avg_ocr_conf, 4) if avg_ocr_conf is not None else None,
+                            "table_diagnostics": tab_diag,
+                            "ocr_diagnostics": ocr_diag_map,
+                            "page_quality_scores": page_scores,
+                            "pdf_metadata": parsed.pdf_metadata,
+                        }
+
+                        # Upsert relational DocumentVersionMetadata record
+                        session.execute(
+                            delete(DocumentVersionMetadata).where(
+                                DocumentVersionMetadata.document_id == doc_id,
+                                DocumentVersionMetadata.version == doc.version,
+                            )
+                        )
+                        doc_ver_meta = DocumentVersionMetadata(
+                            document_id=doc_id,
+                            version=doc.version,
+                            primary_language=getattr(parsed, "primary_language", "eng"),
+                            languages_detected=getattr(parsed, "languages_detected", ["eng"]),
+                            num_pages=parsed.num_pages,
+                            total_chunks=len(all_chunks),
+                            text_chunks=len(text_chunks),
+                            table_chunks=table_chunk_count,
+                            avg_quality_score=round(avg_quality, 4) if avg_quality is not None else None,
+                            avg_ocr_confidence=round(avg_ocr_conf, 4) if avg_ocr_conf is not None else None,
+                            tables_detected=tab_diag.get("tables_detected", 0),
+                            tables_stitched=tab_diag.get("tables_stitched", 0),
+                            tables_processed=tab_diag.get("tables_processed", 0),
+                            tables_warning=tab_diag.get("tables_warning", 0),
+                            tables_failed=tab_diag.get("tables_failed", 0),
+                            pages_native=ocr_diag_map.get("pages_native", 0),
+                            pages_scanned=ocr_diag_map.get("pages_scanned", 0),
+                            pages_mixed=ocr_diag_map.get("pages_mixed", 0),
+                            ocr_pages_processed=ocr_diag_map.get("ocr_pages_processed", 0),
+                            ocr_pages_failed=ocr_diag_map.get("ocr_pages_failed", 0),
+                            pdf_title=parsed.pdf_metadata.get("title"),
+                            pdf_author=parsed.pdf_metadata.get("author"),
+                            page_scores=page_scores,
+                        )
+                        session.add(doc_ver_meta)
 
                     # ── Step 7: Advance status → CHUNKED ─────────────────────
                     doc.status = DocumentStatus.CHUNKED.value

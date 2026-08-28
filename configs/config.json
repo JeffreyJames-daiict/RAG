@@ -45,6 +45,18 @@
     "parent_expansion_neighbor_rows": 10,
     "max_expansion_rows": 50
   },
+  "ocr": {
+    "enabled": true,
+    "provider": "tesseract",
+    "language": "eng",
+    "min_native_text_quality": 0.70,
+    "min_confidence": 0.60,
+    "max_retries": 2,
+    "render_dpi": 300,
+    "default_preprocessing": "standard",
+    "mixed_content_merge": true,
+    "iou_overlap_threshold": 0.30
+  },
   "pipeline": {
     "default_tenant_id": "default",
     "handle_deletions": true,

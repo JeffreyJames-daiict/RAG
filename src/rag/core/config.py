@@ -174,6 +174,41 @@ class TableConfig(BaseModel):
 
 
 
+class OCRConfig(BaseModel):
+    """Configuration for optical character recognition on scanned and mixed PDF pages."""
+    enabled: bool = Field(default=True, description="Enable OCR processing for scanned/mixed pages")
+    provider: str = Field(default="tesseract", description="OCR provider name: tesseract | mock")
+    language: str = Field(default="eng", description="OCR language code")
+    min_native_text_quality: float = Field(
+        default=0.70,
+        ge=0.0,
+        le=1.0,
+        description="Native text quality threshold below which OCR is triggered"
+    )
+    min_confidence: float = Field(
+        default=0.60,
+        ge=0.0,
+        le=1.0,
+        description="Minimum OCR word confidence score required to accept result"
+    )
+    max_retries: int = Field(default=2, ge=0, le=5, description="Max OCR retries with enhanced preprocessing")
+    render_dpi: int = Field(default=300, ge=72, le=600, description="DPI resolution for rendering PDF pages to images")
+    default_preprocessing: str = Field(
+        default="standard",
+        description="Default image preprocessing profile: minimal | standard | aggressive"
+    )
+    mixed_content_merge: bool = Field(
+        default=True,
+        description="Safely merge non-overlapping OCR content with native text on mixed pages"
+    )
+    iou_overlap_threshold: float = Field(
+        default=0.30,
+        ge=0.0,
+        le=1.0,
+        description="Spatial overlap threshold above which OCR text is suppressed to avoid duplicates"
+    )
+
+
 class PipelineConfig(BaseModel):
     """Ingestion and sync pipeline behavior."""
     default_tenant_id: str = Field(default="default", description="Tenant key when omitted in payloads")
@@ -202,6 +237,7 @@ class Settings(BaseModel):
     parser: ParserConfig = Field(default_factory=ParserConfig)
     chunking: ChunkingConfigModel = Field(default_factory=ChunkingConfigModel)
     table: TableConfig = Field(default_factory=TableConfig)
+    ocr: OCRConfig = Field(default_factory=OCRConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 

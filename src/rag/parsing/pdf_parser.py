@@ -1,20 +1,34 @@
-"""PDF text and multi-table extraction using PyMuPDF (fitz).
+"""PDF text, OCR, and multi-table extraction using PyMuPDF (fitz) and modular OCR providers.
 
 Opens PDFs entirely in memory — no temp files — and returns a structured
 canonical ParsedDocument with per-page text, multi-page stitched TableElements,
-HeadingElements, and TextElements with bounding-box collision subtraction.
+HeadingElements, and TextElements with bounding-box collision subtraction,
+page quality classification, and image-based OCR extraction.
 """
 
 from __future__ import annotations
 
+import io
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+from PIL import Image
 import pymupdf as fitz  # PyMuPDF
 
-from rag.core.config import TableConfig, get_settings
+from rag.core.config import OCRConfig, TableConfig, get_settings
+from rag.ocr import (
+    BaseOCRProvider,
+    ContentSource,
+    MixedContentMerger,
+    OCRBlock,
+    OCRPageResult,
+    OCRProviderRegistry,
+    OCRQualityEvaluator,
+    PageClassificationResult,
+    PageQualityAnalyzer,
+)
 from rag.parsing.models import (
     DocumentElement,
     HeadingElement,
@@ -74,7 +88,7 @@ def _is_inside_table(block_bbox: Tuple[float, float, float, float], table_bboxes
 
 
 class PDFParser:
-    """Extract structured text and discrete multi-table elements from PDF bytes using PyMuPDF."""
+    """Extract structured text, discrete multi-table elements, and OCR content from PDF bytes."""
 
     PARSER_VERSION = "pymupdf-v2.0"
 
@@ -83,17 +97,52 @@ class PDFParser:
         extract_images: bool = False,
         extract_tables: bool = True,
         table_config: Optional[TableConfig] = None,
+        ocr_config: Optional[OCRConfig] = None,
+        ocr_provider: Optional[BaseOCRProvider] = None,
     ):
         """
         Args:
             extract_images: If True, annotate image blocks in metadata.
             extract_tables: If True, detect and extract tables as TableElements.
             table_config:   Optional TableConfig model (defaults to settings.table).
+            ocr_config:     Optional OCRConfig model (defaults to settings.ocr).
+            ocr_provider:   Optional explicit OCR provider instance.
         """
         settings = get_settings()
         self.extract_images = extract_images
         self.extract_tables = extract_tables
         self.table_config = table_config or settings.table
+        self.ocr_config = ocr_config or getattr(settings, "ocr", OCRConfig())
+
+        # OCR Subsystem Components
+        self.page_analyzer = PageQualityAnalyzer(
+            min_native_text_quality=self.ocr_config.min_native_text_quality,
+            default_language=self.ocr_config.language,
+        )
+        self.ocr_evaluator = OCRQualityEvaluator(
+            min_confidence=self.ocr_config.min_confidence,
+            max_retries=self.ocr_config.max_retries,
+            default_preprocessing=self.ocr_config.default_preprocessing,
+        )
+        self.mixed_merger = MixedContentMerger(
+            iou_overlap_threshold=self.ocr_config.iou_overlap_threshold
+        )
+
+        if ocr_provider is not None:
+            self.ocr_provider = ocr_provider
+        else:
+            try:
+                self.ocr_provider = OCRProviderRegistry.get_provider(self.ocr_config.provider)
+            except Exception as e:
+                logger.warning("Failed to load OCR provider '%s': %s. Falling back to mock.", self.ocr_config.provider, e)
+                self.ocr_provider = OCRProviderRegistry.get_provider("mock")
+
+    def _render_page_image(self, page: fitz.Page) -> Image.Image:
+        """Render a PyMuPDF page to PIL Image at configured DPI."""
+        pix = page.get_pixmap(dpi=self.ocr_config.render_dpi)
+        # Convert pixmap to PIL Image
+        img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+        return img
 
     def parse(self, content: bytes, filename: Optional[str] = None) -> ParsedDocument:
         """Parse a PDF from raw bytes and return a structured canonical ParsedDocument."""
@@ -102,7 +151,10 @@ class PDFParser:
 
         label = filename or "<in-memory>"
         doc_slug = Path(label).stem.replace(" ", "_").replace("-", "_")
-        logger.info("Parsing PDF '%s' (%d bytes, extract_tables=%s)", label, len(content), self.extract_tables)
+        logger.info(
+            "Parsing PDF '%s' (%d bytes, extract_tables=%s, ocr_enabled=%s)",
+            label, len(content), self.extract_tables, self.ocr_config.enabled,
+        )
 
         try:
             doc = fitz.open(stream=content, filetype="pdf")
@@ -125,10 +177,20 @@ class PDFParser:
         page_headings_map: Dict[int, List[str]] = {}
         page_text_lines_map: Dict[int, List[str]] = {}
         page_elements_map: Dict[int, List[DocumentElement]] = {}
+        page_provenance_map: Dict[int, Dict[str, Any]] = {}
         current_section: Optional[str] = None
         tables_failed_count = 0
 
-        # ── Step 1: Detect Tables and Extract Text per Page ──────────────────
+        # Diagnostics counters
+        ocr_diag = {
+            "pages_native": 0,
+            "pages_scanned": 0,
+            "pages_mixed": 0,
+            "ocr_pages_processed": 0,
+            "ocr_pages_failed": 0,
+        }
+
+        # ── Step 1: Detect Tables, Evaluate Page Quality, and Extract Blocks ──
         for page_idx in range(doc.page_count):
             page = doc[page_idx]
             page_number = page_idx + 1  # 1-indexed
@@ -159,17 +221,36 @@ class PDFParser:
                     tables_failed_count += 1
                     logger.warning("Table detection warning on page %d of '%s': %s", page_number, label, tab_exc)
 
-            # 1b. Extract Text Blocks with Refined Table BBox Subtraction
-            raw_blocks = page.get_text("blocks")
-            parsed_blocks: List[ParsedBlock] = []
-            headings: List[str] = []
-            page_text_lines: List[str] = []
-            page_elements: List[DocumentElement] = []
+            # 1b. Evaluate Page Quality & Layout Classification
+            raw_native_blocks = page.get_text("blocks")
+            native_text = page.get_text("text")
 
-            # Combine text items and table items into unified vertical reading order
-            items_to_sort = []
+            classification = self.page_analyzer.analyze_page(
+                page=page,
+                page_number=page_number,
+                native_text=native_text,
+                native_blocks=raw_native_blocks,
+            )
 
-            for block_no, block in enumerate(raw_blocks):
+            # Determine whether to execute OCR
+            use_ocr = self.ocr_config.enabled and classification.ocr_required
+            page_source = classification.source_type.value
+            ocr_applied = False
+            ocr_conf: Optional[float] = None
+            ocr_quality: Optional[float] = None
+            ocr_profile: Optional[str] = None
+            ocr_attempt = 1
+
+            if classification.source_type == ContentSource.NATIVE:
+                ocr_diag["pages_native"] += 1
+            elif classification.source_type == ContentSource.SCANNED:
+                ocr_diag["pages_scanned"] += 1
+            elif classification.source_type == ContentSource.MIXED:
+                ocr_diag["pages_mixed"] += 1
+
+            # Prepare native text blocks (excluding table bounding box overlap)
+            native_parsed_blocks: List[ParsedBlock] = []
+            for block_no, block in enumerate(raw_native_blocks):
                 x0, y0, x1, y1, block_text, b_no, block_type = block
                 block_bbox = (x0, y0, x1, y1)
 
@@ -184,27 +265,159 @@ class PDFParser:
                     logger.debug("Skipping text block %d on page %d (inside table bbox)", block_no, page_number)
                     continue
 
-                items_to_sort.append(("text", y0, block_bbox, clean_text, block_no, b_no, block_type))
+                native_parsed_blocks.append(
+                    ParsedBlock(
+                        text=clean_text,
+                        bbox=block_bbox,
+                        block_type=block_type,
+                        block_no=b_no,
+                    )
+                )
+
+            final_page_blocks: List[ParsedBlock] = []
+
+            # 1c. Execute OCR if required
+            if use_ocr:
+                ocr_diag["ocr_pages_processed"] += 1
+                logger.info(
+                    "OCR_STARTED page %d of '%s' (type=%s, lang=%s, reason='%s')",
+                    page_number, label, classification.source_type.value,
+                    classification.detected_language, classification.reason,
+                )
+                try:
+                    target_lang = classification.detected_language or self.ocr_config.language
+                    page_image = self._render_page_image(page)
+                    ocr_result = self.ocr_evaluator.process_with_retry(
+                        provider=self.ocr_provider,
+                        raw_image=page_image,
+                        page_number=page_number,
+                        language=target_lang,
+                    )
+                    ocr_applied = True
+                    ocr_conf = ocr_result.confidence
+                    ocr_quality = ocr_result.quality_score
+                    ocr_profile = ocr_result.preprocessing_profile
+                    ocr_attempt = ocr_result.attempt
+
+                    # Scale OCR coordinates from rendered image pixel space back to PDF point space if needed
+                    # PyMuPDF standard 72 pt/in vs render_dpi
+                    scale_factor = 72.0 / float(self.ocr_config.render_dpi)
+                    scaled_ocr_blocks: List[OCRBlock] = []
+                    for ob in ocr_result.blocks:
+                        scaled_bbox = (
+                            ob.bbox[0] * scale_factor,
+                            ob.bbox[1] * scale_factor,
+                            ob.bbox[2] * scale_factor,
+                            ob.bbox[3] * scale_factor,
+                        )
+                        # Skip OCR blocks that land inside detected table bounding boxes
+                        if not _is_inside_table(scaled_bbox, table_bboxes):
+                            scaled_ocr_blocks.append(
+                                OCRBlock(
+                                    text=ob.text,
+                                    bbox=scaled_bbox,
+                                    confidence=ob.confidence,
+                                    block_type=ob.block_type,
+                                    block_no=ob.block_no,
+                                    lines=ob.lines,
+                                )
+                            )
+
+                    # Merge or assign blocks depending on classification
+                    if classification.source_type == ContentSource.SCANNED:
+                        # Full replacement: convert OCR blocks to ParsedBlocks
+                        for idx, ob in enumerate(scaled_ocr_blocks):
+                            final_page_blocks.append(
+                                ParsedBlock(
+                                    text=ob.text,
+                                    bbox=ob.bbox,
+                                    block_type=ob.block_type,
+                                    block_no=idx,
+                                )
+                            )
+                    elif classification.source_type == ContentSource.MIXED:
+                        # Non-duplicating spatial and semantic merge
+                        final_page_blocks = self.mixed_merger.merge(
+                            native_blocks=native_parsed_blocks,
+                            ocr_blocks=scaled_ocr_blocks,
+                        )
+                    else:
+                        final_page_blocks = list(native_parsed_blocks)
+
+                    logger.info(
+                        "OCR_COMPLETED page %d: %d blocks extracted (conf=%.2f, quality=%.2f, profile=%s)",
+                        page_number, len(scaled_ocr_blocks), ocr_conf or 0.0, ocr_quality or 0.0, ocr_profile,
+                    )
+
+                    # Re-detect language from the actual OCR output text.
+                    # For scanned pages the pre-OCR classification ran on empty native text
+                    # (empty string), so classification.language_confidence is 0.0.
+                    # Now that we have real text from the OCR engine, re-run detection on it
+                    # to get a meaningful language + confidence for the provenance record.
+                    if final_page_blocks:
+                        ocr_page_text = " ".join(
+                            b.text for b in final_page_blocks if b.text and b.text.strip()
+                        )
+                        if ocr_page_text.strip():
+                            post_ocr_lang = self.page_analyzer.language_detector.detect_language(ocr_page_text)
+                            detected_lang_final = post_ocr_lang.language
+                            lang_conf_final = post_ocr_lang.confidence
+                        else:
+                            detected_lang_final = classification.detected_language
+                            lang_conf_final = classification.language_confidence
+                    else:
+                        detected_lang_final = classification.detected_language
+                        lang_conf_final = classification.language_confidence
+
+                except Exception as ocr_exc:
+                    ocr_diag["ocr_pages_failed"] += 1
+                    logger.exception("OCR failed on page %d of '%s': %s", page_number, label, ocr_exc)
+                    final_page_blocks = list(native_parsed_blocks)
+                    detected_lang_final = classification.detected_language
+                    lang_conf_final = classification.language_confidence
+
+            else:
+                final_page_blocks = list(native_parsed_blocks)
+                detected_lang_final = classification.detected_language
+                lang_conf_final = classification.language_confidence
+
+            page_provenance_map[page_number] = {
+                "content_source": page_source,
+                "ocr_applied": ocr_applied,
+                "ocr_confidence": ocr_conf,
+                "quality_score": ocr_quality if ocr_applied else classification.native_text_quality,
+                "ocr_provider": self.ocr_provider.name if ocr_applied else None,
+                "preprocessing_profile": ocr_profile,
+                "ocr_attempt": ocr_attempt,
+                "detected_language": detected_lang_final,
+                "language_confidence": lang_conf_final,
+            }
+
+            # 1d. Assemble DocumentElements and Sort into Natural Reading Sequence
+            parsed_blocks: List[ParsedBlock] = []
+            headings: List[str] = []
+            page_text_lines: List[str] = []
+            page_elements: List[DocumentElement] = []
+
+            items_to_sort = []
+            for b_idx, block_obj in enumerate(final_page_blocks):
+                items_to_sort.append(("text", block_obj.bbox[1] if block_obj.bbox else 0.0, block_obj))
 
             for t_idx, headers, rows, refined_bbox in page_raw_tables_data:
-                items_to_sort.append(("table", refined_bbox[1], refined_bbox, (t_idx, headers, rows), None, None, None))
+                items_to_sort.append(("table", refined_bbox[1], (t_idx, headers, rows, refined_bbox)))
 
             items_to_sort.sort(key=lambda x: x[1])
 
-            # Process items in vertical order to track accurate section headers
             for item in items_to_sort:
                 kind = item[0]
 
                 if kind == "text":
-                    _, _, block_bbox, clean_text, block_no, b_no, block_type = item
-                    parsed_blocks.append(
-                        ParsedBlock(
-                            text=clean_text,
-                            bbox=block_bbox,
-                            block_type=block_type,
-                            block_no=b_no,
-                        )
-                    )
+                    _, _, block_obj = item
+                    clean_text = block_obj.text.strip()
+                    if not clean_text:
+                        continue
+
+                    parsed_blocks.append(block_obj)
                     page_text_lines.append(clean_text)
 
                     first_line = clean_text.split("\n")[0].strip()
@@ -214,23 +427,31 @@ class PDFParser:
                         h_elem = HeadingElement(
                             element_id=f"{doc_slug}_p{page_number}_h{len(headings)}",
                             page_number=page_number,
-                            bbox=block_bbox,
+                            bbox=block_obj.bbox,
                             section=current_section,
                             content=first_line,
+                            content_source=page_source,
+                            ocr_applied=ocr_applied,
+                            ocr_confidence=ocr_conf,
+                            quality_score=ocr_quality,
                         )
                         page_elements.append(h_elem)
                     else:
                         t_elem = TextElement(
-                            element_id=f"{doc_slug}_p{page_number}_txt{block_no+1}",
+                            element_id=f"{doc_slug}_p{page_number}_txt{len(page_elements)+1}",
                             page_number=page_number,
-                            bbox=block_bbox,
+                            bbox=block_obj.bbox,
                             section=current_section,
                             content=clean_text,
+                            content_source=page_source,
+                            ocr_applied=ocr_applied,
+                            ocr_confidence=ocr_conf,
+                            quality_score=ocr_quality,
                         )
                         page_elements.append(t_elem)
 
                 elif kind == "table":
-                    _, _, refined_bbox, (t_idx, headers, rows), _, _, _ = item
+                    _, _, (t_idx, headers, rows, refined_bbox) = item
                     table_id = f"{doc_slug}_p{page_number}_t{t_idx+1}"
                     table_elem = TableElement(
                         element_id=table_id,
@@ -283,6 +504,7 @@ class PDFParser:
             combined_page_elements.sort(key=lambda e: (e.bbox[1] if e.bbox else 0.0))
 
             full_page_text = "\n".join(page_text_lines_map.get(page_number, []))
+            prov = page_provenance_map.get(page_number, {})
 
             pages.append(
                 ParsedPage(
@@ -292,11 +514,20 @@ class PDFParser:
                     headings=page_headings_map.get(page_number, []),
                     tables=page_tabs,
                     elements=combined_page_elements,
+                    content_source=prov.get("content_source", "native"),
+                    ocr_applied=prov.get("ocr_applied", False),
+                    ocr_confidence=prov.get("ocr_confidence"),
+                    quality_score=prov.get("quality_score"),
+                    ocr_provider=prov.get("ocr_provider"),
+                    preprocessing_profile=prov.get("preprocessing_profile"),
+                    ocr_attempt=prov.get("ocr_attempt", 1),
+                    detected_language=prov.get("detected_language", "eng"),
+                    language_confidence=prov.get("language_confidence", 1.0),
                 )
             )
             all_elements.extend(combined_page_elements)
 
-        # ── Step 4: Aggregate Table Health Diagnostics ───────────────────────
+        # ── Step 4: Aggregate Diagnostics & Language ─────────────────────────
         table_diagnostics = {
             "tables_detected": total_detected_tables,
             "tables_stitched": stitched_count,
@@ -305,9 +536,14 @@ class PDFParser:
             "tables_failed": tables_failed_count,
         }
 
+        detected_langs = [p.detected_language for p in pages if getattr(p, "detected_language", None)]
+        primary_lang = max(set(detected_langs), key=detected_langs.count) if detected_langs else "eng"
+        unique_langs = list(dict.fromkeys(detected_langs))
+
         logger.info(
-            "Finished parsing '%s': %d pages, %d tables processed (%d multi-page stitched, %d warnings)",
-            label, len(pages), len(final_tables), stitched_count, table_diagnostics["tables_warning"],
+            "Finished parsing '%s': %d pages (lang=%s, native=%d, scanned=%d, mixed=%d, ocr_processed=%d), %d tables processed",
+            label, len(pages), primary_lang, ocr_diag["pages_native"], ocr_diag["pages_scanned"], ocr_diag["pages_mixed"],
+            ocr_diag["ocr_pages_processed"], len(final_tables),
         )
 
         return ParsedDocument(
@@ -316,5 +552,8 @@ class PDFParser:
             tables=final_tables,
             pdf_metadata=pdf_metadata,
             parser_version=self.PARSER_VERSION,
+            primary_language=primary_lang,
+            languages_detected=unique_langs,
             table_diagnostics=table_diagnostics,
+            ocr_diagnostics=ocr_diag,
         )

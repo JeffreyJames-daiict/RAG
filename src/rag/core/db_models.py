@@ -5,9 +5,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     Column,
     DateTime,
     Enum as SQLEnum,
+    Float,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
@@ -174,6 +176,13 @@ class DocumentVersion(Base):
         nullable=True,
         doc="Version of parser/extractor used on this revision",
     )
+    metadata_snapshot: Mapped[Dict[str, Any]] = mapped_column(
+        "metadata",
+        JSON,
+        nullable=False,
+        default=dict,
+        doc="Aggregated document version diagnostics, table stats, OCR metrics, and quality scores",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -185,6 +194,174 @@ class DocumentVersion(Base):
     document: Mapped["Document"] = relationship(
         "Document",
         back_populates="versions",
+    )
+    metadata_record: Mapped[Optional["DocumentVersionMetadata"]] = relationship(
+        "DocumentVersionMetadata",
+        back_populates="version_record",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+
+class DocumentVersionMetadata(Base):
+    """Table: document_version_metadata
+
+    Relational normalization of document version metadata, diagnostics,
+    quality metrics, and table/OCR execution statistics.
+    """
+    __tablename__ = "document_version_metadata"
+
+    document_id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        doc="Foreign key to document_versions table",
+    )
+    version: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        doc="Document version number",
+    )
+    primary_language: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="eng",
+        doc="Primary detected language (ISO 639-2)",
+    )
+    languages_detected: Mapped[List[str]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
+        doc="List of all detected languages across document pages",
+    )
+    num_pages: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Total page count",
+    )
+    total_chunks: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Total chunks generated for this version",
+    )
+    text_chunks: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Count of plain text chunks",
+    )
+    table_chunks: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Count of structured table chunks",
+    )
+    avg_quality_score: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Average composite quality score across all pages (0.0 to 1.0)",
+    )
+    avg_ocr_confidence: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Average OCR confidence score across OCR processed pages",
+    )
+    tables_detected: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Total raw table elements detected",
+    )
+    tables_stitched: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Number of multi-page tables stitched",
+    )
+    tables_processed: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Total final table elements processed",
+    )
+    tables_warning: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Count of tables with validation warnings",
+    )
+    tables_failed: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Count of tables failed during extraction",
+    )
+    pages_native: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Count of digital native pages",
+    )
+    pages_scanned: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Count of scanned raster pages",
+    )
+    pages_mixed: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Count of mixed native/scanned pages",
+    )
+    ocr_pages_processed: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Count of pages processed with OCR engine",
+    )
+    ocr_pages_failed: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Count of pages where OCR failed",
+    )
+    pdf_title: Mapped[Optional[str]] = mapped_column(
+        String(512),
+        nullable=True,
+        doc="Title from PDF metadata",
+    )
+    pdf_author: Mapped[Optional[str]] = mapped_column(
+        String(256),
+        nullable=True,
+        doc="Author from PDF metadata",
+    )
+    page_scores: Mapped[List[Dict[str, Any]]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
+        doc="Per-page score breakdown list",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        doc="Timestamp of record creation",
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["document_id", "version"],
+            ["document_versions.document_id", "document_versions.version"],
+            ondelete="CASCADE",
+        ),
+    )
+
+    # Relationship
+    version_record: Mapped["DocumentVersion"] = relationship(
+        "DocumentVersion",
+        back_populates="metadata_record",
     )
 
 
@@ -258,9 +435,188 @@ class Chunk(Base):
         back_populates="chunk",
         cascade="all, delete-orphan",
     )
+    metadata_record: Mapped[Optional["ChunkMetadata"]] = relationship(
+        "ChunkMetadata",
+        back_populates="chunk",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         Index("ix_chunks_doc_ver_idx", "document_id", "version", "chunk_index"),
+    )
+
+
+class ChunkMetadata(Base):
+    """Table: chunk_metadata
+
+    Relational normalization of chunk metadata, table boundaries,
+    language, OCR provenance, and quality attributes.
+    """
+    __tablename__ = "chunk_metadata"
+
+    chunk_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("chunks.chunk_id", ondelete="CASCADE"),
+        primary_key=True,
+        doc="Foreign key to parent chunk",
+    )
+    document_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("documents.document_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        doc="Foreign key to document",
+    )
+    version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        doc="Document version number",
+    )
+    chunk_type: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="text",
+        index=True,
+        doc="Chunk category: 'text', 'table', 'table_summary'",
+    )
+    page: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="Primary page number",
+    )
+    page_start: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="Start page for multi-page table chunks",
+    )
+    page_end: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="End page for multi-page table chunks",
+    )
+    token_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Token length of chunk text",
+    )
+    language: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="eng",
+        doc="Detected language code",
+    )
+    language_confidence: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Language identification confidence (0.0 to 1.0)",
+    )
+    content_source: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="native",
+        doc="Source modality: 'native', 'scanned', 'mixed', 'ocr'",
+    )
+    quality_score: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Quality score of extracted content (0.0 to 1.0)",
+    )
+    ocr_applied: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        doc="True if OCR was executed for this chunk",
+    )
+    ocr_confidence: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="OCR confidence score",
+    )
+    ocr_provider: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,
+        doc="Name of OCR provider used",
+    )
+    preprocessing_profile: Mapped[Optional[str]] = mapped_column(
+        String(32),
+        nullable=True,
+        doc="Image preprocessing profile used",
+    )
+    ocr_attempt: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        doc="OCR retry attempt number",
+    )
+    table_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        nullable=True,
+        index=True,
+        doc="Unique identifier of table element",
+    )
+    parent_table_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        nullable=True,
+        index=True,
+        doc="Root parent table identifier for expansion",
+    )
+    row_start: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="Starting row index (1-indexed)",
+    )
+    row_end: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="Ending row index (1-indexed)",
+    )
+    total_rows: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="Total rows in parent table",
+    )
+    total_columns: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="Total columns in parent table",
+    )
+    is_continuation: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        doc="True if table continues across pages",
+    )
+    validation_status: Mapped[Optional[str]] = mapped_column(
+        String(32),
+        nullable=True,
+        default="valid",
+        doc="Table validation status: 'valid', 'warning', 'error'",
+    )
+    serialization_strategy: Mapped[Optional[str]] = mapped_column(
+        String(32),
+        nullable=True,
+        default="hybrid",
+        doc="Serialization mode used for table chunk",
+    )
+    extra_attributes: Mapped[Dict[str, Any]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=dict,
+        doc="Any additional custom metadata attributes",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        doc="Timestamp of creation",
+    )
+
+    # Relationship
+    chunk: Mapped["Chunk"] = relationship(
+        "Chunk",
+        back_populates="metadata_record",
     )
 
 

@@ -111,6 +111,83 @@
       "title": "LoggingConfig",
       "type": "object"
     },
+    "OCRConfig": {
+      "description": "Configuration for optical character recognition on scanned and mixed PDF pages.",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Enable OCR processing for scanned/mixed pages",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "provider": {
+          "default": "tesseract",
+          "description": "OCR provider name: tesseract | mock",
+          "title": "Provider",
+          "type": "string"
+        },
+        "language": {
+          "default": "eng",
+          "description": "OCR language code",
+          "title": "Language",
+          "type": "string"
+        },
+        "min_native_text_quality": {
+          "default": 0.7,
+          "description": "Native text quality threshold below which OCR is triggered",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Native Text Quality",
+          "type": "number"
+        },
+        "min_confidence": {
+          "default": 0.6,
+          "description": "Minimum OCR word confidence score required to accept result",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Confidence",
+          "type": "number"
+        },
+        "max_retries": {
+          "default": 2,
+          "description": "Max OCR retries with enhanced preprocessing",
+          "maximum": 5,
+          "minimum": 0,
+          "title": "Max Retries",
+          "type": "integer"
+        },
+        "render_dpi": {
+          "default": 300,
+          "description": "DPI resolution for rendering PDF pages to images",
+          "maximum": 600,
+          "minimum": 72,
+          "title": "Render Dpi",
+          "type": "integer"
+        },
+        "default_preprocessing": {
+          "default": "standard",
+          "description": "Default image preprocessing profile: minimal | standard | aggressive",
+          "title": "Default Preprocessing",
+          "type": "string"
+        },
+        "mixed_content_merge": {
+          "default": true,
+          "description": "Safely merge non-overlapping OCR content with native text on mixed pages",
+          "title": "Mixed Content Merge",
+          "type": "boolean"
+        },
+        "iou_overlap_threshold": {
+          "default": 0.3,
+          "description": "Spatial overlap threshold above which OCR text is suppressed to avoid duplicates",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Iou Overlap Threshold",
+          "type": "number"
+        }
+      },
+      "title": "OCRConfig",
+      "type": "object"
+    },
     "ParserConfig": {
       "description": "Document extraction and parsing settings.",
       "properties": {
@@ -314,6 +391,9 @@
     },
     "table": {
       "$ref": "#/$defs/TableConfig"
+    },
+    "ocr": {
+      "$ref": "#/$defs/OCRConfig"
     },
     "pipeline": {
       "$ref": "#/$defs/PipelineConfig"

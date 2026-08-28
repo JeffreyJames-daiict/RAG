@@ -1,4 +1,4 @@
-"""Database migration helper — ensures all ORM tables and schemas exist on the target PostgreSQL / SQLite instance."""
+"""Database migration helper — ensures all ORM tables, schemas, and columns exist on PostgreSQL / SQLite."""
 
 from __future__ import annotations
 import logging
@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 def _prepare_schemas(engine) -> None:
-    """Create the 'raw' schema/database depending on the dialect.
+    """Create the 'raw' schema/database and ensure column migrations depending on the dialect.
 
-    - **PostgreSQL**: ``CREATE SCHEMA IF NOT EXISTS raw;``
+    - **PostgreSQL**: ``CREATE SCHEMA IF NOT EXISTS raw;`` + column alterations.
     - **SQLite**: ``ATTACH DATABASE ':memory:' AS raw;``
     """
     dialect = engine.dialect.name
@@ -21,8 +21,17 @@ def _prepare_schemas(engine) -> None:
     if dialect == "postgresql":
         with engine.connect() as conn:
             conn.execute(text("CREATE SCHEMA IF NOT EXISTS raw;"))
+            # Column migrations for existing tables
+            conn.execute(text("""
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'document_versions') THEN
+                        ALTER TABLE public.document_versions ADD COLUMN IF NOT EXISTS metadata JSON NOT NULL DEFAULT '{}'::json;
+                    END IF;
+                END $$;
+            """))
             conn.commit()
-        logger.info("Ensured PostgreSQL schema 'raw' exists.")
+        logger.info("Ensured PostgreSQL schema 'raw' and document_versions columns exist.")
 
     elif dialect == "sqlite":
         # Ensure raw database is attached on existing raw connection

@@ -141,6 +141,12 @@ def main():
                     size_str = f" ({size_bytes:,} bytes)" if size_bytes else ""
                 print(f"     ↳ Version v{ver.version} (hash: {ver.content_hash[:16]}...)")
                 print(f"       {stored_icon} raw_location: {raw_loc}{size_str}")
+                meta_snap = ver.metadata_snapshot or {}
+                if meta_snap:
+                    avg_q = meta_snap.get("avg_quality_score")
+                    ocr_diag = meta_snap.get("ocr_diagnostics", {})
+                    tab_diag = meta_snap.get("table_diagnostics", {})
+                    print(f"       📊 Stored DB Metrics: Avg Quality={avg_q} | Tables={tab_diag.get('tables_processed', 0)} | OCR Processed={ocr_diag.get('ocr_pages_processed', 0)}")
 
         # 5. Step 4: Query Errors Table
         all_errors = session.execute(
@@ -211,15 +217,36 @@ def main():
 
                 for ch in all_doc_chunks[:4]:
                     ch_type = ch.chunk_metadata.get("chunk_type", "text")
+                    src = ch.chunk_metadata.get("content_source", "native")
+                    q_score = ch.chunk_metadata.get("quality_score")
+                    q_str = f" [q={q_score:.2f}]" if q_score is not None else ""
                     type_badge = {"table": "📊 [TABLE]", "table_summary": "📋 [TABLE_SUMMARY]", "text": "📝 [TEXT]"}.get(ch_type, "📄 [CHUNK]")
-                    preview_text = ch.text[:100].replace("\n", " ")
+                    preview_text = ch.text[:90].replace("\n", " ")
                     tokens = ch.chunk_metadata.get("token_count", "?")
                     extra = ""
                     if ch_type == "table":
                         r_start = ch.chunk_metadata.get("row_start", "?")
                         r_end = ch.chunk_metadata.get("row_end", "?")
                         extra = f" | Rows {r_start}-{r_end}"
-                    print(f"     ↳ {type_badge} #{ch.chunk_index} pg{ch.page} ({tokens} tok{extra}) | {preview_text!r}...")
+                    print(f"     ↳ {type_badge} #{ch.chunk_index} pg{ch.page} ({tokens} tok{extra} | {src}{q_str}) | {preview_text!r}...")
+
+    # ── Step 5b: Normalized Relational Metadata Tables ────────────────────────
+    print("\n" + "=" * 60)
+    print(" 🗄️  STEP 5B: RELATIONAL METADATA TABLES (Normalized DB View)")
+    print("=" * 60)
+    from rag.core.db_models import ChunkMetadata, DocumentVersionMetadata
+
+    with db_manager.session() as session:
+        print("\n📋 Table: document_version_metadata")
+        v_metas = session.execute(select(DocumentVersionMetadata)).scalars().all()
+        for vm in v_metas:
+            print(f"   • Doc {vm.document_id[:8]}... v{vm.version} | Lang: {vm.primary_language} | Pages: {vm.num_pages} | Chunks: {vm.total_chunks} ({vm.text_chunks} txt, {vm.table_chunks} tab) | Avg Quality: {vm.avg_quality_score or 0.0:.2f} | OCR Conf: {vm.avg_ocr_confidence or 0.0:.2f} | Title: {vm.pdf_title or '(none)'}")
+
+        print("\n📋 Table: chunk_metadata (Sample preview)")
+        c_metas = session.execute(select(ChunkMetadata).order_by(ChunkMetadata.document_id, ChunkMetadata.page, ChunkMetadata.row_start)).scalars().all()
+        for cm in c_metas[:8]:
+            table_info = f" | Tab: {cm.table_id} (Rows {cm.row_start}-{cm.row_end})" if cm.table_id else ""
+            print(f"   • Chunk {cm.chunk_id[:8]}... | Pg {cm.page} | Type: {cm.chunk_type:<13} | Lang: {cm.language} | Src: {cm.content_source:<7} | Tokens: {cm.token_count:<3} | Quality: {cm.quality_score or 0.0:.2f}{table_info}")
 
     # ── Step 6: Table-Aware Retrieval Demo ────────────────────────────────────
     print("\n" + "=" * 60)

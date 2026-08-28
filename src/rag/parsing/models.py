@@ -39,6 +39,10 @@ class DocumentElement:
     page_number: int = 1  # 1-indexed
     bbox: Optional[Tuple[float, float, float, float]] = None  # (x0, y0, x1, y1)
     section: Optional[str] = None                             # Nearest preceding heading
+    content_source: str = "native"                            # "native" | "ocr" | "merged"
+    ocr_applied: bool = False
+    ocr_confidence: Optional[float] = None
+    quality_score: Optional[float] = None
 
 
 @dataclass
@@ -127,6 +131,15 @@ class ParsedPage:
     headings: List[str] = field(default_factory=list)
     tables: List[TableElement] = field(default_factory=list)
     elements: List[DocumentElement] = field(default_factory=list)
+    content_source: str = "native"                     # "native" | "scanned" | "mixed"
+    ocr_applied: bool = False
+    ocr_confidence: Optional[float] = None
+    quality_score: Optional[float] = None
+    ocr_provider: Optional[str] = None
+    preprocessing_profile: Optional[str] = None
+    ocr_attempt: int = 1
+    detected_language: str = "eng"
+    language_confidence: float = 1.0
 
 
 @dataclass
@@ -137,6 +150,8 @@ class ParsedDocument:
     tables: List[TableElement] = field(default_factory=list)
     pdf_metadata: Dict[str, Any] = field(default_factory=dict)
     parser_version: str = "pymupdf-v2.0"
+    primary_language: str = "eng"
+    languages_detected: List[str] = field(default_factory=list)
     table_diagnostics: Dict[str, Any] = field(
         default_factory=lambda: {
             "tables_detected": 0,
@@ -144,6 +159,15 @@ class ParsedDocument:
             "tables_processed": 0,
             "tables_warning": 0,
             "tables_failed": 0,
+        }
+    )
+    ocr_diagnostics: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "pages_native": 0,
+            "pages_scanned": 0,
+            "pages_mixed": 0,
+            "ocr_pages_processed": 0,
+            "ocr_pages_failed": 0,
         }
     )
 
