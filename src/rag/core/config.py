@@ -81,7 +81,7 @@ class StorageConfig(BaseModel):
     """Immutable raw document byte store settings."""
     backend_type: str = Field(
         default="database",
-        description="Storage provider (e.g. database | local | s3)"
+        description="Storage provider (e.g. database | local | s3 | minio)"
     )
     raw_schema: str = Field(
         default="raw",
@@ -94,6 +94,31 @@ class StorageConfig(BaseModel):
     verify_on_read: bool = Field(
         default=True,
         description="Validate content against sha256 checksum on read"
+    )
+    # S3 / MinIO settings (used when backend_type='s3' or 'minio')
+    s3_bucket: Optional[str] = Field(
+        default=None,
+        description="S3 / MinIO bucket name for raw payload storage"
+    )
+    s3_endpoint_url: Optional[str] = Field(
+        default=None,
+        description="S3-compatible endpoint URL (e.g. http://127.0.0.1:9000 for MinIO)"
+    )
+    s3_access_key: Optional[str] = Field(
+        default=None,
+        description="S3 / MinIO access key ID"
+    )
+    s3_secret_key: Optional[str] = Field(
+        default=None,
+        description="S3 / MinIO secret access key"
+    )
+    s3_region: Optional[str] = Field(
+        default=None,
+        description="AWS region name (not required for MinIO)"
+    )
+    s3_storage_prefix: str = Field(
+        default="storage",
+        description="Top-level prefix inside the S3 bucket for pipeline artifacts (separate from source documents)"
     )
 
     @property
@@ -289,6 +314,55 @@ class NormalizationConfig(BaseModel):
     )
 
 
+class EmbeddingConfig(BaseModel):
+    """Configuration for embedding generation and vector persistence."""
+    enabled: bool = Field(default=True, description="Enable embedding generation during ingestion")
+    provider: str = Field(default="mock", description="Embedding provider: mock | openai | fastembed")
+    model: str = Field(default="text-embedding-3-small", description="Embedding model identifier")
+    model_version: str = Field(default="v1.0", description="Model configuration version tag")
+    dimension: int = Field(default=1536, ge=1, description="Expected vector dimensionality")
+    batch_size: int = Field(default=64, ge=1, le=2048, description="Batch size for embedding requests")
+    max_retries: int = Field(default=3, ge=0, le=10, description="Max retries for transient provider failures")
+    retry_backoff_sec: float = Field(default=1.0, ge=0.1, le=60.0, description="Initial retry backoff delay in seconds")
+    timeout_sec: float = Field(default=30.0, ge=1.0, le=300.0, description="Provider request timeout in seconds")
+    max_input_tokens: int = Field(default=8191, ge=32, description="Max token budget accepted by the model")
+    oversized_chunk_strategy: str = Field(
+        default="truncate",
+        description="Handling for oversized chunks: truncate | reject | error"
+    )
+    api_key: Optional[str] = Field(default=None, description="Provider API key (e.g. OPENAI_API_KEY)")
+    endpoint_url: Optional[str] = Field(default=None, description="Custom API endpoint URL for self-hosted/proxy")
+
+
+class VisionConfig(BaseModel):
+    """Configuration for multimodal vision and diagram semantic analysis."""
+    enabled: bool = Field(default=True, description="Enable vision-based semantic analysis for diagrams/figures")
+    provider: str = Field(default="mock", description="Vision provider: mock | openai")
+    model: str = Field(default="gpt-4o", description="Vision model identifier")
+    api_key: Optional[str] = Field(default=None, description="Vision provider API key")
+    endpoint_url: Optional[str] = Field(default=None, description="Custom vision API endpoint URL")
+    timeout_sec: float = Field(default=45.0, ge=1.0, le=300.0, description="Vision request timeout in seconds")
+    max_retries: int = Field(default=2, ge=0, le=5, description="Max retries for transient vision errors")
+    retry_backoff_sec: float = Field(default=1.0, ge=0.1, le=60.0, description="Initial retry backoff delay")
+    max_image_dimension: int = Field(default=2048, ge=256, le=4096, description="Max image width/height sent to vision API")
+    extract_relationships: bool = Field(default=True, description="Extract structured entity relationships/connections")
+
+
+class AssetConfig(BaseModel):
+    """Configuration for document asset, figure, diagram, and image processing."""
+    enabled: bool = Field(default=True, description="Enable visual asset / figure processing")
+    min_image_width: int = Field(default=64, ge=8, description="Minimum image width in pixels to consider as an asset")
+    min_image_height: int = Field(default=64, ge=8, description="Minimum image height in pixels to consider as an asset")
+    min_image_area: int = Field(default=4096, ge=64, description="Minimum image area in pixels (width * height)")
+    max_aspect_ratio: float = Field(default=8.0, ge=1.0, description="Max aspect ratio threshold above which asset is flagged/skipped as a banner/border")
+    filter_decorative: bool = Field(default=True, description="Filter out decorative icons, bullets, and backgrounds")
+    caption_detection_enabled: bool = Field(default=True, description="Detect and associate figure captions")
+    caption_vertical_distance_pts: float = Field(default=60.0, ge=5.0, le=300.0, description="Max vertical distance in points to associate caption with figure")
+    figure_ocr_enabled: bool = Field(default=True, description="Run OCR on extracted figures to capture text elements")
+    figure_ocr_min_confidence: float = Field(default=0.40, ge=0.0, le=1.0, description="Minimum confidence score for figure OCR words")
+    vision: VisionConfig = Field(default_factory=VisionConfig, description="Vision analysis settings")
+
+
 class LoggingConfig(BaseModel):
     """Logging format and level."""
     level: str = Field(default="INFO", description="Logging level: DEBUG | INFO | WARNING | ERROR | CRITICAL")
@@ -311,6 +385,8 @@ class Settings(BaseModel):
     table: TableConfig = Field(default_factory=TableConfig)
     ocr: OCRConfig = Field(default_factory=OCRConfig)
     normalization: NormalizationConfig = Field(default_factory=NormalizationConfig)
+    asset: AssetConfig = Field(default_factory=AssetConfig)
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 

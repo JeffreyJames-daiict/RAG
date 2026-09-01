@@ -12,9 +12,10 @@
     "echo": false
   },
   "storage": {
-    "backend_type": "database",
+    "backend_type": "minio",
     "raw_schema": "raw",
-    "verify_on_read": true
+    "verify_on_read": true,
+    "s3_storage_prefix": "storage"
   },
   "parser": {
     "version": "pymupdf-v1.0",
@@ -72,6 +73,45 @@
     "remove_headers": true,
     "remove_footers": true,
     "remove_standalone_page_numbers": true
+  },
+  "asset": {
+    "enabled": true,
+    "min_image_width": 64,
+    "min_image_height": 64,
+    "min_image_area": 4096,
+    "max_aspect_ratio": 8.0,
+    "filter_decorative": true,
+    "caption_detection_enabled": true,
+    "caption_vertical_distance_pts": 60.0,
+    "figure_ocr_enabled": true,
+    "figure_ocr_min_confidence": 0.40,
+    "vision": {
+      "enabled": true,
+      "provider": "mock",
+      "model": "gpt-4o",
+      "api_key": "${OPENAI_API_KEY:-}",
+      "endpoint_url": null,
+      "timeout_sec": 45.0,
+      "max_retries": 2,
+      "retry_backoff_sec": 1.0,
+      "max_image_dimension": 2048,
+      "extract_relationships": true
+    }
+  },
+  "embedding": {
+    "enabled": true,
+    "provider": "mock",
+    "model": "text-embedding-3-small",
+    "model_version": "v1.0",
+    "dimension": 1536,
+    "batch_size": 64,
+    "max_retries": 3,
+    "retry_backoff_sec": 1.0,
+    "timeout_sec": 30.0,
+    "max_input_tokens": 8191,
+    "oversized_chunk_strategy": "truncate",
+    "api_key": "${OPENAI_API_KEY:-}",
+    "endpoint_url": null
   },
   "pipeline": {
     "default_tenant_id": "default",

@@ -129,6 +129,11 @@ class Document(Base):
         back_populates="document",
         cascade="all, delete-orphan",
     )
+    assets: Mapped[List["DocumentAsset"]] = relationship(
+        "DocumentAsset",
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
     errors: Mapped[List["PipelineError"]] = relationship(
         "PipelineError",
         back_populates="document",
@@ -562,6 +567,12 @@ class ChunkMetadata(Base):
         index=True,
         doc="Root parent table identifier for expansion",
     )
+    asset_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        nullable=True,
+        index=True,
+        doc="Unique identifier of associated DocumentAsset (figure, diagram, chart)",
+    )
     row_start: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
@@ -644,6 +655,16 @@ class Embedding(Base):
         primary_key=True,
         default="v1.0",
         doc="Version of model or embedding configuration",
+    )
+    dimension: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="Dimensionality of the embedding vector (e.g. 1536)",
+    )
+    provider: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,
+        doc="Name of embedding provider (e.g. mock, openai, fastembed)",
     )
     vector: Mapped[Any] = mapped_column(
         JSON,
@@ -806,5 +827,164 @@ class RawDocumentPayload(Base):
         default=lambda: datetime.now(timezone.utc),
         doc="Creation timestamp",
     )
+
+
+class DocumentAsset(Base):
+    """Table: document_assets
+
+    Stores extracted visual assets (figures, architecture diagrams, flowcharts, charts,
+    technical drawings, photos) with bounding boxes, storage URIs, captions, OCR text,
+    and structured semantic descriptions (entities and relationships).
+    """
+    __tablename__ = "document_assets"
+
+    asset_id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+        doc="Unique identifier for the document visual asset",
+    )
+    document_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("documents.document_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        doc="Foreign key to parent document",
+    )
+    version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        index=True,
+        doc="Document version number",
+    )
+    page_number: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        doc="1-indexed page number where asset is located",
+    )
+    asset_type: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="FIGURE",
+        index=True,
+        doc="Primary classification (e.g. FIGURE, DIAGRAM, ARCHITECTURE_DIAGRAM, CHART, PHOTO)",
+    )
+    asset_subtype: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,
+        doc="Specific domain subtype (e.g. cloud_architecture, sequence_diagram, bar_chart)",
+    )
+    storage_uri: Mapped[str] = mapped_column(
+        String(2048),
+        nullable=False,
+        doc="Deterministic path/key in raw/object storage backend",
+    )
+    content_hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        index=True,
+        doc="SHA-256 hash of extracted image bytes for deduplication & idempotency",
+    )
+    bbox: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON,
+        nullable=True,
+        doc="Spatial bounding box on page {x0, y0, x1, y1}",
+    )
+    width: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Pixel width of extracted image",
+    )
+    height: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Pixel height of extracted image",
+    )
+    mime_type: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        default="image/png",
+        doc="MIME type of stored image",
+    )
+    caption: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        doc="Associated figure title, label, or caption",
+    )
+    ocr_text: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        doc="Text detected inside the figure via Tesseract OCR",
+    )
+    ocr_confidence: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Average OCR word confidence for text inside figure",
+    )
+    semantic_description: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        doc="High-level semantic and architectural description from Vision / FigureAnalyzer",
+    )
+    entities: Mapped[List[str]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
+        doc="Extracted component nodes, labels, and entities",
+    )
+    relationships: Mapped[List[Dict[str, Any]]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
+        doc="Extracted directed relationships/connections between entities",
+    )
+    processing_status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="READY",
+        index=True,
+        doc="Asset lifecycle status (EXTRACTED, CLASSIFIED, OCR_COMPLETED, VISION_COMPLETED, READY, FAILED, LOW_QUALITY)",
+    )
+    processor_version: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        default="v1.0",
+        doc="Asset processing subsystem version",
+    )
+    asset_metadata: Mapped[Dict[str, Any]] = mapped_column(
+        "metadata",
+        JSON,
+        nullable=False,
+        default=dict,
+        doc="Additional custom metadata attributes",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        doc="Creation timestamp",
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        doc="Update timestamp",
+    )
+
+    # Relationships
+    document: Mapped["Document"] = relationship(
+        "Document",
+        back_populates="assets",
+    )
+
+    __table_args__ = (
+        Index("ix_document_assets_doc_ver", "document_id", "version"),
+    )
+
 
 

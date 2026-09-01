@@ -11,23 +11,31 @@ from typing import Dict, List, Optional, Set
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from rag.assets.models import ExtractedVisualCandidate, ProcessedAsset
+from rag.assets.processor import AssetProcessor
 from rag.connectors.base import BaseSourceConnector
+from rag.core.config import Settings, get_settings
 from rag.core.database import DatabaseManager
 from rag.core.db_models import (
     Chunk,
     ChunkMetadata,
     Document,
+    DocumentAsset,
     DocumentVersion,
     DocumentVersionMetadata,
     PipelineError,
 )
 from rag.core.models import (
+    ChunkSchema,
     DeletionCandidate,
     DiscoveredItem,
     DiscoveryReport,
     DocumentChangeType,
     DocumentDescriptor,
+    DocumentSchema,
     DocumentStatus,
+    DocumentVersionSchema,
+    PipelineErrorSchema,
     PipelineStage,
     RawDocumentPayload,
     SourceType,
@@ -36,7 +44,7 @@ from rag.core.models import (
 from rag.normalization import ContentNormalizer
 from rag.parsing import ChunkingConfig, PDFParser, RecursiveTextChunker, TableChunker
 from rag.storage.base import RawStorageBackend
-from rag.core.config import get_settings
+from rag.embeddings import EmbeddingService, EmbeddingSummary
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +66,7 @@ class IngestionPipeline:
     """Orchestrates source discovery, two-tier change detection (last-modified timestamp
 
     and SHA-256 cryptographic hash), version bumping, soft-deletion reconciliation,
-    database persistence, and optional immutable raw storage.
+    database persistence, optional immutable raw storage, and embedding generation.
     """
 
     def __init__(
@@ -66,16 +74,24 @@ class IngestionPipeline:
         db_manager: DatabaseManager,
         raw_storage: Optional[RawStorageBackend] = None,
         raw_storage_dir: Optional[str] = None,  # legacy — ignored if raw_storage provided
+        embedding_service: Optional[EmbeddingService] = None,
+        asset_processor: Optional[AssetProcessor] = None,
     ):
         self.db_manager = db_manager
         self.raw_storage = raw_storage
         self.connectors: Dict[str, BaseSourceConnector] = {}
+        self.embedding_service = embedding_service or EmbeddingService(db_manager=db_manager)
 
         # Back-compat: auto-create a LocalRawStorageBackend from raw_storage_dir if given
         if raw_storage is None and raw_storage_dir:
             from rag.storage.local_storage import LocalRawStorageBackend
             self.raw_storage = LocalRawStorageBackend(base_dir=raw_storage_dir)
             logger.info("Auto-created LocalRawStorageBackend from raw_storage_dir: %s", raw_storage_dir)
+
+        self.asset_processor = asset_processor or AssetProcessor(
+            config=get_settings().asset,
+            storage_backend=self.raw_storage,
+        )
 
     def register_connector(self, name: str, connector: BaseSourceConnector) -> None:
         """Register a source connector with a unique identifier."""
@@ -559,6 +575,7 @@ class IngestionPipeline:
         chunking_config: Optional[ChunkingConfig] = None,
         tenant_id: Optional[str] = None,
         force_reparse: bool = False,
+        auto_embed: bool = False,
     ) -> Dict[str, int]:
         """Parse and chunk all FETCHED documents for a connector.
 
@@ -678,7 +695,81 @@ class IngestionPipeline:
                             all_chunks.extend(t_chunks)
                             table_chunk_count += len(t_chunks)
 
-                    # 3c. Normalize sequential chunk_index
+                    # 3c. Visual Asset / Figure Processing & Chunks
+                    processed_assets: List[ProcessedAsset] = []
+                    figure_chunks: List[ChunkSchema] = []
+                    if cfg.asset.enabled and getattr(parsed, "figures", None):
+                        page_text_blocks_for_caps: Dict[int, List[Tuple[Tuple[float, float, float, float], str]]] = {}
+                        for p in parsed.pages:
+                            blocks = []
+                            for el in p.elements:
+                                if hasattr(el, "content") and getattr(el, "bbox", None):
+                                    b = el.bbox
+                                    blocks.append((b[0], b[1], b[2], b[3], el.content))
+                            page_text_blocks_for_caps[p.page_number] = self.asset_processor.caption_detector.find_captions_on_page(blocks)
+
+                        # Clean existing DocumentAssets for this document version
+                        session.execute(
+                            delete(DocumentAsset).where(
+                                DocumentAsset.document_id == doc_id,
+                                DocumentAsset.version == doc.version,
+                            )
+                        )
+
+                        for fig in parsed.figures:
+                            cand = ExtractedVisualCandidate(
+                                asset_id=fig.asset_id or str(uuid4()),
+                                document_id=doc_id,
+                                version=doc.version,
+                                page_number=fig.page_number,
+                                bbox=fig.bbox or (0.0, 0.0, 0.0, 0.0),
+                                image_bytes=fig.image_bytes or b"",
+                                mime_type=fig.mime_type,
+                                width=fig.width,
+                                height=fig.height,
+                                source_type=fig.metadata.get("source_type", "digital_embedded"),
+                            )
+                            processed = self.asset_processor.process_candidate(
+                                candidate=cand,
+                                tenant_id=doc.tenant_id,
+                                captions_on_page=page_text_blocks_for_caps.get(fig.page_number, []),
+                            )
+                            if processed:
+                                processed_assets.append(processed)
+                                a_schema = processed.schema
+                                db_asset = DocumentAsset(
+                                    asset_id=str(a_schema.asset_id),
+                                    document_id=doc_id,
+                                    version=a_schema.version,
+                                    page_number=a_schema.page_number,
+                                    asset_type=a_schema.asset_type.value,
+                                    asset_subtype=a_schema.asset_subtype,
+                                    storage_uri=a_schema.storage_uri,
+                                    content_hash=a_schema.content_hash,
+                                    bbox=a_schema.bbox,
+                                    width=a_schema.width,
+                                    height=a_schema.height,
+                                    mime_type=a_schema.mime_type,
+                                    caption=a_schema.caption,
+                                    ocr_text=a_schema.ocr_text,
+                                    ocr_confidence=a_schema.ocr_confidence,
+                                    semantic_description=a_schema.semantic_description,
+                                    entities=a_schema.entities,
+                                    relationships=a_schema.relationships,
+                                    processing_status=a_schema.processing_status,
+                                    processor_version=a_schema.processor_version,
+                                    asset_metadata=a_schema.asset_metadata,
+                                )
+                                session.add(db_asset)
+
+                        if processed_assets:
+                            figure_chunks = self.asset_processor.create_chunks_for_assets(
+                                processed_assets=processed_assets,
+                                start_chunk_index=len(all_chunks),
+                            )
+                            all_chunks.extend(figure_chunks)
+
+                    # 3d. Normalize sequential chunk_index
                     for idx, c in enumerate(all_chunks):
                         c.chunk_index = idx
 
@@ -728,6 +819,7 @@ class IngestionPipeline:
                             ocr_attempt=meta_dict.get("ocr_attempt", 1),
                             table_id=meta_dict.get("table_id"),
                             parent_table_id=meta_dict.get("parent_id") or meta_dict.get("table_id"),
+                            asset_id=meta_dict.get("asset_id"),
                             row_start=meta_dict.get("row_start"),
                             row_end=meta_dict.get("row_end"),
                             total_rows=meta_dict.get("total_rows"),
@@ -739,7 +831,7 @@ class IngestionPipeline:
                                 "chunk_type", "page", "page_start", "page_end", "token_count",
                                 "language", "language_confidence", "content_source", "quality_score",
                                 "ocr_applied", "ocr_confidence", "ocr_provider", "preprocessing_profile",
-                                "ocr_attempt", "table_id", "parent_id", "row_start", "row_end",
+                                "ocr_attempt", "table_id", "parent_id", "asset_id", "row_start", "row_end",
                                 "total_rows", "total_columns", "is_continuation", "validation_status",
                                 "serialization_strategy",
                             }},
@@ -779,6 +871,7 @@ class IngestionPipeline:
 
                         tab_diag = parsed.table_diagnostics or {}
                         ocr_diag_map = getattr(parsed, "ocr_diagnostics", {})
+                        asset_diag_map = getattr(parsed, "asset_diagnostics", {})
 
                         doc_ver.metadata_snapshot = {
                             "num_pages": parsed.num_pages,
@@ -787,10 +880,13 @@ class IngestionPipeline:
                             "total_chunks": len(all_chunks),
                             "text_chunks": len(text_chunks),
                             "table_chunks": table_chunk_count,
+                            "figure_chunks": len(figure_chunks),
+                            "total_assets": len(processed_assets),
                             "avg_quality_score": round(avg_quality, 4),
                             "avg_ocr_confidence": round(avg_ocr_conf, 4) if avg_ocr_conf is not None else None,
                             "table_diagnostics": tab_diag,
                             "ocr_diagnostics": ocr_diag_map,
+                            "asset_diagnostics": asset_diag_map,
                             "page_quality_scores": page_scores,
                             "pdf_metadata": parsed.pdf_metadata,
                         }
@@ -837,10 +933,23 @@ class IngestionPipeline:
                     results[doc_id] = len(all_chunks)
                     logger.info(
                         "✅ Parsed & chunked '%s' (doc %s): %d total chunks "
-                        "(%d text, %d table chunks across %d tables, %d pages)",
+                        "(%d text, %d table, %d figure chunks, %d assets, %d pages)",
                         label, doc_id, len(all_chunks),
-                        len(text_chunks), table_chunk_count, len(parsed.tables), parsed.num_pages,
+                        len(text_chunks), table_chunk_count, len(figure_chunks), len(processed_assets), parsed.num_pages,
                     )
+
+                    # Optional post-chunking auto-embedding
+                    if auto_embed and cfg.embedding.enabled:
+                        session.flush()
+                        embed_res = self.embedding_service.embed_document(
+                            document_id=doc_id,
+                            version=doc.version,
+                            session=session,
+                        )
+                        if embed_res.failed_count == 0 and embed_res.embedded_count + embed_res.skipped_count > 0:
+                            doc.status = DocumentStatus.INDEXED.value
+                            doc.updated_at = datetime.now(timezone.utc)
+                            logger.info("✅ Auto-embedded & indexed doc %s", doc_id)
 
                 except Exception as exc:
                     results[doc_id] = 0
@@ -867,6 +976,117 @@ class IngestionPipeline:
                         logger.error("Failed to persist parse error to DB: %s", log_err)
 
         return results
+
+    # ------------------------------------------------------------------
+    # Embedding Generation Stage
+    # ------------------------------------------------------------------
+
+    def generate_embeddings(
+        self,
+        connector_name: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        force_reembed: bool = False,
+    ) -> Dict[str, EmbeddingSummary]:
+        """Generate and persist vector embeddings for CHUNKED documents.
+
+        Advances document status to INDEXED upon successful embedding.
+
+        Args:
+            connector_name: Optional connector name filter.
+            tenant_id: Tenant scope. Defaults to ``settings.default_tenant_id``.
+            force_reembed: If True, re-embed chunks even if existing embeddings exist.
+
+        Returns:
+            Dict mapping document_id -> EmbeddingSummary.
+        """
+        cfg = get_settings()
+        tenant_id = tenant_id or cfg.default_tenant_id
+
+        target_statuses = [DocumentStatus.CHUNKED.value]
+        if force_reembed:
+            target_statuses.append(DocumentStatus.INDEXED.value)
+
+        results: Dict[str, EmbeddingSummary] = {}
+
+        with self.db_manager.session() as session:
+            stmt = select(Document).where(
+                Document.tenant_id == tenant_id,
+                Document.status.in_(target_statuses),
+            )
+            if connector_name:
+                connector = self.get_connector(connector_name)
+                stmt = stmt.where(Document.source == connector.source_type.value)
+
+            docs: List[Document] = session.execute(stmt).scalars().all()
+            logger.info("generate_embeddings: found %d document(s) to process", len(docs))
+
+            for doc in docs:
+                doc_id = doc.document_id
+                try:
+                    summary = self.embedding_service.embed_document(
+                        document_id=doc_id,
+                        version=doc.version,
+                        force_reembed=force_reembed,
+                    )
+                    results[doc_id] = summary
+
+                    if summary.failed_count == 0:
+                        doc.status = DocumentStatus.INDEXED.value
+                        doc.updated_at = datetime.now(timezone.utc)
+                    else:
+                        logger.warning(
+                            "Embedding partial failure for doc %s (%d failed chunks)",
+                            doc_id, summary.failed_count,
+                        )
+
+                except Exception as exc:
+                    error_msg = str(exc)
+                    logger.exception("Failed embedding generation for doc %s: %s", doc_id, error_msg)
+                    results[doc_id] = EmbeddingSummary(
+                        document_id=doc_id,
+                        model_name=self.embedding_service.model_name,
+                        model_version=self.embedding_service.model_version,
+                        provider_name=self.embedding_service.provider_name,
+                        errors=[error_msg],
+                    )
+
+                    try:
+                        err_entry = PipelineError(
+                            document_id=doc_id,
+                            tenant_id=tenant_id,
+                            source_uri=doc.source_uri,
+                            stage=PipelineStage.EMBED.value,
+                            error_type=type(exc).__name__,
+                            error_message=error_msg,
+                            stack_trace=traceback.format_exc(),
+                        )
+                        session.add(err_entry)
+                    except Exception as log_err:
+                        logger.error("Failed to log embed error to DB: %s", log_err)
+
+        return results
+
+    def embed_document(
+        self,
+        document_id: str,
+        version: Optional[int] = None,
+        force_reembed: bool = False,
+    ) -> EmbeddingSummary:
+        """Convenience method to embed a single document by ID and advance status to INDEXED."""
+        summary = self.embedding_service.embed_document(
+            document_id=document_id,
+            version=version,
+            force_reembed=force_reembed,
+        )
+        if summary.failed_count == 0:
+            with self.db_manager.session() as session:
+                doc = session.execute(
+                    select(Document).where(Document.document_id == document_id)
+                ).scalar_one_or_none()
+                if doc:
+                    doc.status = DocumentStatus.INDEXED.value
+                    doc.updated_at = datetime.now(timezone.utc)
+        return summary
 
     # ------------------------------------------------------------------
     # Internal helpers

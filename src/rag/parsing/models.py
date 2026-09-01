@@ -111,6 +111,31 @@ class TableElement(DocumentElement):
         return result
 
 
+@dataclass
+class FigureElement(DocumentElement):
+    """A visual figure, architecture diagram, chart, or technical illustration."""
+    element_type: ElementType = ElementType.IMAGE
+    asset_id: str = ""
+    asset_type: str = "FIGURE"
+    asset_subtype: Optional[str] = None
+    storage_uri: Optional[str] = None
+    content_hash: str = ""
+    width: int = 0
+    height: int = 0
+    mime_type: str = "image/png"
+    image_bytes: Optional[bytes] = None
+    caption: Optional[str] = None
+    ocr_text: Optional[str] = None
+    ocr_confidence: Optional[float] = None
+    semantic_description: Optional[str] = None
+    entities: List[str] = field(default_factory=list)
+    relationships: List[Dict[str, Any]] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        self.element_type = ElementType.IMAGE
+
+
 # ── Backwards-Compatible Page & Block Containers ─────────────────────────────
 
 @dataclass
@@ -130,6 +155,7 @@ class ParsedPage:
     blocks: List[ParsedBlock] = field(default_factory=list)
     headings: List[str] = field(default_factory=list)
     tables: List[TableElement] = field(default_factory=list)
+    figures: List[FigureElement] = field(default_factory=list)
     elements: List[DocumentElement] = field(default_factory=list)
     content_source: str = "native"                     # "native" | "scanned" | "mixed"
     ocr_applied: bool = False
@@ -148,6 +174,7 @@ class ParsedDocument:
     pages: List[ParsedPage] = field(default_factory=list)
     elements: List[DocumentElement] = field(default_factory=list)
     tables: List[TableElement] = field(default_factory=list)
+    figures: List[FigureElement] = field(default_factory=list)
     pdf_metadata: Dict[str, Any] = field(default_factory=dict)
     parser_version: str = "pymupdf-v2.0"
     primary_language: str = "eng"
@@ -170,6 +197,16 @@ class ParsedDocument:
             "ocr_pages_failed": 0,
         }
     )
+    asset_diagnostics: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "assets_extracted": 0,
+            "assets_classified": 0,
+            "figures_detected": 0,
+            "diagrams_detected": 0,
+            "ocr_applied": 0,
+            "vision_applied": 0,
+        }
+    )
 
     @property
     def full_text(self) -> str:
@@ -183,4 +220,8 @@ class ParsedDocument:
     @property
     def total_tables(self) -> int:
         return len(self.tables)
+
+    @property
+    def total_figures(self) -> int:
+        return len(self.figures)
 

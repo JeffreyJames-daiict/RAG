@@ -115,9 +115,26 @@ class PipelineStage(str, Enum):
     DISCOVERY = "DISCOVERY"
     FETCH = "FETCH"
     PARSE = "PARSE"
+    ASSET = "ASSET"
     CHUNK = "CHUNK"
     EMBED = "EMBED"
     PIPELINE = "PIPELINE"
+
+
+class AssetType(str, Enum):
+    """Classification of visual document assets."""
+    FIGURE = "FIGURE"
+    DIAGRAM = "DIAGRAM"
+    ARCHITECTURE_DIAGRAM = "ARCHITECTURE_DIAGRAM"
+    FLOWCHART = "FLOWCHART"
+    TECHNICAL_DRAWING = "TECHNICAL_DRAWING"
+    CHART = "CHART"
+    PHOTO = "PHOTO"
+    ILLUSTRATION = "ILLUSTRATION"
+    TABLE_IMAGE = "TABLE_IMAGE"
+    EQUATION_IMAGE = "EQUATION_IMAGE"
+    DECORATIVE = "DECORATIVE"
+    UNKNOWN = "UNKNOWN"
 
 
 class DocumentSchema(BaseModel):
@@ -166,6 +183,35 @@ class DocumentVersionSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DocumentAssetSchema(BaseModel):
+    """Schema representing the `document_assets` table record."""
+    asset_id: UUID = Field(default_factory=uuid4)
+    document_id: UUID
+    version: int = 1
+    page_number: int = 1
+    asset_type: AssetType = AssetType.FIGURE
+    asset_subtype: Optional[str] = None
+    storage_uri: str
+    content_hash: str
+    bbox: Optional[Dict[str, Any]] = None
+    width: int = 0
+    height: int = 0
+    mime_type: str = "image/png"
+    caption: Optional[str] = None
+    ocr_text: Optional[str] = None
+    ocr_confidence: Optional[float] = None
+    semantic_description: Optional[str] = None
+    entities: List[str] = Field(default_factory=list)
+    relationships: List[Dict[str, Any]] = Field(default_factory=list)
+    processing_status: str = "READY"
+    processor_version: str = "v1.0"
+    asset_metadata: Dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ChunkSchema(BaseModel):
     """Schema representing the `chunks` table record."""
     chunk_id: UUID = Field(default_factory=uuid4)
@@ -186,6 +232,8 @@ class EmbeddingSchema(BaseModel):
     chunk_id: UUID
     embedding_model: str
     embedding_version: str = "v1.0"
+    dimension: Optional[int] = None
+    provider: Optional[str] = None
     vector: List[float]
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

@@ -28,10 +28,17 @@ def _prepare_schemas(engine) -> None:
                     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'document_versions') THEN
                         ALTER TABLE public.document_versions ADD COLUMN IF NOT EXISTS metadata JSON NOT NULL DEFAULT '{}'::json;
                     END IF;
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'chunk_metadata') THEN
+                        ALTER TABLE public.chunk_metadata ADD COLUMN IF NOT EXISTS asset_id VARCHAR(128);
+                    END IF;
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'embeddings') THEN
+                        ALTER TABLE public.embeddings ADD COLUMN IF NOT EXISTS dimension INTEGER;
+                        ALTER TABLE public.embeddings ADD COLUMN IF NOT EXISTS provider VARCHAR(64);
+                    END IF;
                 END $$;
             """))
             conn.commit()
-        logger.info("Ensured PostgreSQL schema 'raw' and document_versions columns exist.")
+        logger.info("Ensured PostgreSQL schema 'raw' and column migrations exist.")
 
     elif dialect == "sqlite":
         # Ensure raw database is attached on existing raw connection
@@ -42,6 +49,17 @@ def _prepare_schemas(engine) -> None:
             pass  # Already attached
         finally:
             raw_conn.close()
+
+        # Check SQLite table columns
+        with engine.connect() as conn:
+            try:
+                res = conn.execute(text("PRAGMA table_info(chunk_metadata)")).fetchall()
+                existing_cols = {row[1] for row in res}
+                if existing_cols and "asset_id" not in existing_cols:
+                    conn.execute(text("ALTER TABLE chunk_metadata ADD COLUMN asset_id VARCHAR(128)"))
+                    conn.commit()
+            except Exception:
+                pass
 
 
 def ensure_raw_schema(engine) -> None:

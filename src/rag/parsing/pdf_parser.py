@@ -17,7 +17,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from PIL import Image
 import pymupdf as fitz  # PyMuPDF
 
-from rag.core.config import OCRConfig, TableConfig, get_settings
+from rag.assets.extractor import AssetExtractor
+from rag.assets.models import ExtractedVisualCandidate
+from rag.core.config import AssetConfig, OCRConfig, TableConfig, get_settings
 from rag.ocr import (
     BaseOCRProvider,
     ContentSource,
@@ -31,6 +33,7 @@ from rag.ocr import (
 )
 from rag.parsing.models import (
     DocumentElement,
+    FigureElement,
     HeadingElement,
     ParsedBlock,
     ParsedDocument,
@@ -98,6 +101,7 @@ class PDFParser:
         extract_tables: bool = True,
         table_config: Optional[TableConfig] = None,
         ocr_config: Optional[OCRConfig] = None,
+        asset_config: Optional[AssetConfig] = None,
         ocr_provider: Optional[BaseOCRProvider] = None,
     ):
         """
@@ -106,6 +110,7 @@ class PDFParser:
             extract_tables: If True, detect and extract tables as TableElements.
             table_config:   Optional TableConfig model (defaults to settings.table).
             ocr_config:     Optional OCRConfig model (defaults to settings.ocr).
+            asset_config:   Optional AssetConfig model (defaults to settings.asset).
             ocr_provider:   Optional explicit OCR provider instance.
         """
         settings = get_settings()
@@ -113,6 +118,7 @@ class PDFParser:
         self.extract_tables = extract_tables
         self.table_config = table_config or settings.table
         self.ocr_config = ocr_config or getattr(settings, "ocr", OCRConfig())
+        self.asset_config = asset_config or getattr(settings, "asset", AssetConfig())
 
         # OCR Subsystem Components
         self.page_analyzer = PageQualityAnalyzer(
@@ -127,6 +133,7 @@ class PDFParser:
         self.mixed_merger = MixedContentMerger(
             iou_overlap_threshold=self.ocr_config.iou_overlap_threshold
         )
+        self.asset_extractor = AssetExtractor(config=self.asset_config)
 
         if ocr_provider is not None:
             self.ocr_provider = ocr_provider
@@ -177,6 +184,7 @@ class PDFParser:
         page_headings_map: Dict[int, List[str]] = {}
         page_text_lines_map: Dict[int, List[str]] = {}
         page_elements_map: Dict[int, List[DocumentElement]] = {}
+        page_figures_map: Dict[int, List[FigureElement]] = {}
         page_provenance_map: Dict[int, Dict[str, Any]] = {}
         current_section: Optional[str] = None
         tables_failed_count = 0
@@ -478,6 +486,51 @@ class PDFParser:
             page_text_lines_map[page_number] = page_text_lines
             page_elements_map[page_number] = page_elements
 
+            # 1e. Extract Visual Candidates (Figures, Diagrams, Architecture Images)
+            page_figures: List[FigureElement] = []
+            if self.asset_config.enabled:
+                try:
+                    candidates: List[ExtractedVisualCandidate] = []
+                    # 1. Digital embedded images
+                    if classification.source_type in (ContentSource.NATIVE, ContentSource.MIXED):
+                        digital_cands = self.asset_extractor.extract_from_digital_page(
+                            doc=doc,
+                            page_idx=page_idx,
+                            document_id=doc_slug,
+                        )
+                        candidates.extend(digital_cands)
+
+                    # 2. Scanned figure regions
+                    if classification.source_type == ContentSource.SCANNED or (not candidates and classification.source_type == ContentSource.MIXED):
+                        page_img = self._render_page_image(page)
+                        scanned_cands = self.asset_extractor.extract_from_scanned_page_image(
+                            page_image=page_img,
+                            page_number=page_number,
+                            document_id=doc_slug,
+                            page_rect_pts=(float(page.rect.width), float(page.rect.height)),
+                        )
+                        candidates.extend(scanned_cands)
+
+                    for cand in candidates:
+                        fig_elem = FigureElement(
+                            element_id=f"{doc_slug}_p{page_number}_fig{len(page_figures)+1}",
+                            asset_id=cand.asset_id,
+                            page_number=page_number,
+                            bbox=cand.bbox,
+                            width=cand.width,
+                            height=cand.height,
+                            mime_type=cand.mime_type,
+                            image_bytes=cand.image_bytes,
+                            content_source=page_source,
+                            metadata={"source_type": cand.source_type},
+                        )
+                        page_figures.append(fig_elem)
+
+                except Exception as asset_exc:
+                    logger.warning("Visual asset extraction warning on page %d of '%s': %s", page_number, label, asset_exc)
+
+            page_figures_map[page_number] = page_figures
+
         doc.close()
 
         # ── Step 2: Multi-Page Continuation Stitching ─────────────────────────
@@ -495,12 +548,15 @@ class PDFParser:
         # ── Step 3: Assemble ParsedPages and Global Elements List ────────────
         pages: List[ParsedPage] = []
         all_elements: List[DocumentElement] = []
+        all_figures: List[FigureElement] = []
 
         for page_number in range(1, doc_metadata_pages := pdf_metadata["num_pages"] + 1):
             page_txt_elements = page_elements_map.get(page_number, [])
             page_tabs = [t for t in final_tables if t.page_start == page_number or t.page_number == page_number]
+            page_figs = page_figures_map.get(page_number, [])
+            all_figures.extend(page_figs)
 
-            combined_page_elements: List[DocumentElement] = page_txt_elements + page_tabs
+            combined_page_elements: List[DocumentElement] = page_txt_elements + page_tabs + page_figs
             combined_page_elements.sort(key=lambda e: (e.bbox[1] if e.bbox else 0.0))
 
             full_page_text = "\n".join(page_text_lines_map.get(page_number, []))
@@ -513,6 +569,7 @@ class PDFParser:
                     blocks=page_text_blocks_map.get(page_number, []),
                     headings=page_headings_map.get(page_number, []),
                     tables=page_tabs,
+                    figures=page_figs,
                     elements=combined_page_elements,
                     content_source=prov.get("content_source", "native"),
                     ocr_applied=prov.get("ocr_applied", False),
@@ -536,24 +593,35 @@ class PDFParser:
             "tables_failed": tables_failed_count,
         }
 
+        asset_diagnostics = {
+            "assets_extracted": len(all_figures),
+            "assets_classified": len(all_figures),
+            "figures_detected": len(all_figures),
+            "diagrams_detected": 0,
+            "ocr_applied": 0,
+            "vision_applied": 0,
+        }
+
         detected_langs = [p.detected_language for p in pages if getattr(p, "detected_language", None)]
         primary_lang = max(set(detected_langs), key=detected_langs.count) if detected_langs else "eng"
         unique_langs = list(dict.fromkeys(detected_langs))
 
         logger.info(
-            "Finished parsing '%s': %d pages (lang=%s, native=%d, scanned=%d, mixed=%d, ocr_processed=%d), %d tables processed",
+            "Finished parsing '%s': %d pages (lang=%s, native=%d, scanned=%d, mixed=%d, ocr_processed=%d), %d tables, %d figures",
             label, len(pages), primary_lang, ocr_diag["pages_native"], ocr_diag["pages_scanned"], ocr_diag["pages_mixed"],
-            ocr_diag["ocr_pages_processed"], len(final_tables),
+            ocr_diag["ocr_pages_processed"], len(final_tables), len(all_figures),
         )
 
         return ParsedDocument(
             pages=pages,
             elements=all_elements,
             tables=final_tables,
+            figures=all_figures,
             pdf_metadata=pdf_metadata,
             parser_version=self.PARSER_VERSION,
             primary_language=primary_lang,
             languages_detected=unique_langs,
             table_diagnostics=table_diagnostics,
             ocr_diagnostics=ocr_diag,
+            asset_diagnostics=asset_diagnostics,
         )
