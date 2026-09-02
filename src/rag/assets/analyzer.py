@@ -11,7 +11,7 @@ from rag.assets.models import FigureAnalysisResult, FigureEntityRelationship
 from rag.assets.providers import get_vision_provider
 from rag.assets.providers.base import BaseVisionProvider
 from rag.core.config import AssetConfig
-from rag.core.models import AssetType
+from rag.core.models import AssetType, IndexingPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -28,19 +28,30 @@ class FigureAnalyzer:
         self.vision_config = self.config.vision
         self.provider = vision_provider or get_vision_provider(self.vision_config)
 
-    def should_analyze_with_vision(self, asset_type: AssetType) -> bool:
+    def should_analyze_with_vision(
+        self,
+        asset_type: AssetType,
+        indexing_policy: Optional[IndexingPolicy] = None,
+    ) -> bool:
         """Production check: Determine if expensive vision analysis should run."""
         if not self.vision_config.enabled:
             return False
 
-        # Only run vision on informative architectural / technical visuals
+        if indexing_policy is not None:
+            return indexing_policy in (IndexingPolicy.VISION_ANALYSIS, IndexingPolicy.FULL_MULTIMODAL)
+
+        # Fallback type-based evaluation when policy is not provided
         valuable_types = {
             AssetType.ARCHITECTURE_DIAGRAM,
             AssetType.DIAGRAM,
             AssetType.FLOWCHART,
             AssetType.CHART,
+            AssetType.GRAPH,
             AssetType.TECHNICAL_DRAWING,
             AssetType.FIGURE,
+            AssetType.SCREENSHOT,
+            AssetType.TABLE_IMAGE,
+            AssetType.EQUATION_IMAGE,
         }
         return asset_type in valuable_types
 
@@ -51,9 +62,11 @@ class FigureAnalyzer:
         caption: Optional[str] = None,
         ocr_text: Optional[str] = None,
         mime_type: str = "image/png",
+        context: Optional[Any] = None,
+        indexing_policy: Optional[IndexingPolicy] = None,
     ) -> FigureAnalysisResult:
         """Run vision analysis with retry logic and error isolation."""
-        if not self.should_analyze_with_vision(asset_type):
+        if not self.should_analyze_with_vision(asset_type, indexing_policy=indexing_policy):
             return FigureAnalysisResult(
                 description=caption or (ocr_text[:200] if ocr_text else ""),
                 entities=[],
@@ -75,6 +88,7 @@ class FigureAnalyzer:
                     ocr_text=ocr_text,
                     asset_type=asset_type,
                     mime_type=mime_type,
+                    context=context,
                 )
                 return res
 

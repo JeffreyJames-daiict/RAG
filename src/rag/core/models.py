@@ -129,12 +129,28 @@ class AssetType(str, Enum):
     FLOWCHART = "FLOWCHART"
     TECHNICAL_DRAWING = "TECHNICAL_DRAWING"
     CHART = "CHART"
+    GRAPH = "GRAPH"
     PHOTO = "PHOTO"
+    PORTRAIT = "PORTRAIT"
     ILLUSTRATION = "ILLUSTRATION"
     TABLE_IMAGE = "TABLE_IMAGE"
     EQUATION_IMAGE = "EQUATION_IMAGE"
+    SCREENSHOT = "SCREENSHOT"
+    LOGO = "LOGO"
+    WATERMARK = "WATERMARK"
+    ICON = "ICON"
+    SIGNATURE = "SIGNATURE"
     DECORATIVE = "DECORATIVE"
     UNKNOWN = "UNKNOWN"
+
+
+class IndexingPolicy(str, Enum):
+    """Indexing and analysis policy for visual assets."""
+    IGNORE = "IGNORE"
+    STORE_ONLY = "STORE_ONLY"
+    OCR_ONLY = "OCR_ONLY"
+    VISION_ANALYSIS = "VISION_ANALYSIS"
+    FULL_MULTIMODAL = "FULL_MULTIMODAL"
 
 
 class DocumentSchema(BaseModel):
@@ -193,6 +209,7 @@ class DocumentAssetSchema(BaseModel):
     asset_subtype: Optional[str] = None
     storage_uri: str
     content_hash: str
+    perceptual_hash: Optional[str] = None
     bbox: Optional[Dict[str, Any]] = None
     width: int = 0
     height: int = 0
@@ -203,7 +220,11 @@ class DocumentAssetSchema(BaseModel):
     semantic_description: Optional[str] = None
     entities: List[str] = Field(default_factory=list)
     relationships: List[Dict[str, Any]] = Field(default_factory=list)
+    relevance_score: Optional[float] = None
+    relevance_reason: Optional[str] = None
+    indexing_policy: IndexingPolicy = IndexingPolicy.STORE_ONLY
     processing_status: str = "READY"
+    processing_error: Optional[str] = None
     processor_version: str = "v1.0"
     asset_metadata: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

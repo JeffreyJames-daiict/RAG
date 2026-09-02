@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from rag.assets.models import ProcessedAsset
-from rag.core.models import ChunkSchema
+from rag.core.models import ChunkSchema, IndexingPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +17,15 @@ class AssetChunker:
 
     def __init__(self, chunking_version: str = "asset-v1.0"):
         self.chunking_version = chunking_version
+
+    def is_indexable(self, processed_asset: ProcessedAsset) -> bool:
+        """Check whether the asset's indexing policy allows search chunk creation."""
+        policy = processed_asset.schema.indexing_policy
+        return policy in (
+            IndexingPolicy.VISION_ANALYSIS,
+            IndexingPolicy.OCR_ONLY,
+            IndexingPolicy.FULL_MULTIMODAL,
+        )
 
     def build_semantic_text(self, processed_asset: ProcessedAsset) -> str:
         """Construct structured, high-density textual representation of figure/diagram."""
@@ -67,6 +76,7 @@ class AssetChunker:
             "asset_subtype": asset.asset_subtype,
             "storage_uri": asset.storage_uri,
             "content_hash": asset.content_hash,
+            "perceptual_hash": asset.perceptual_hash,
             "bbox": asset.bbox,
             "width": asset.width,
             "height": asset.height,
@@ -74,6 +84,9 @@ class AssetChunker:
             "has_ocr": bool(asset.ocr_text),
             "has_vision": bool(asset.semantic_description),
             "entities": asset.entities,
+            "relevance_score": asset.relevance_score,
+            "relevance_reason": asset.relevance_reason,
+            "indexing_policy": asset.indexing_policy.value if hasattr(asset.indexing_policy, "value") else str(asset.indexing_policy),
             "processing_status": asset.processing_status,
             **asset.asset_metadata,
         }

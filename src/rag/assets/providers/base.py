@@ -23,6 +23,7 @@ class BaseVisionProvider(ABC):
         ocr_text: Optional[str] = None,
         asset_type: AssetType = AssetType.FIGURE,
         mime_type: str = "image/png",
+        context: Optional[Any] = None,
     ) -> FigureAnalysisResult:
         """Analyze a visual figure/diagram and return structured semantic descriptions,
 

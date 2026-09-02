@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Set
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from rag.assets.models import ExtractedVisualCandidate, ProcessedAsset
+from rag.assets.models import AssetContextInfo, ExtractedVisualCandidate, ProcessedAsset
 from rag.assets.processor import AssetProcessor
 from rag.connectors.base import BaseSourceConnector
 from rag.core.config import Settings, get_settings
@@ -88,10 +88,15 @@ class IngestionPipeline:
             self.raw_storage = LocalRawStorageBackend(base_dir=raw_storage_dir)
             logger.info("Auto-created LocalRawStorageBackend from raw_storage_dir: %s", raw_storage_dir)
 
-        self.asset_processor = asset_processor or AssetProcessor(
-            config=get_settings().asset,
-            storage_backend=self.raw_storage,
-        )
+        if asset_processor is not None:
+            self.asset_processor = asset_processor
+        else:
+            from rag.storage import get_asset_storage_backend
+            asset_storage = get_asset_storage_backend(get_settings(), db_manager=self.db_manager)
+            self.asset_processor = AssetProcessor(
+                config=get_settings().asset,
+                storage_backend=asset_storage,
+            )
 
     def register_connector(self, name: str, connector: BaseSourceConnector) -> None:
         """Register a source connector with a unique identifier."""
@@ -699,14 +704,25 @@ class IngestionPipeline:
                     processed_assets: List[ProcessedAsset] = []
                     figure_chunks: List[ChunkSchema] = []
                     if cfg.asset.enabled and getattr(parsed, "figures", None):
+                        self.asset_processor.reset_session()
                         page_text_blocks_for_caps: Dict[int, List[Tuple[Tuple[float, float, float, float], str]]] = {}
+                        page_headings_map: Dict[int, List[str]] = {}
+                        page_nearby_text_map: Dict[int, str] = {}
+
                         for p in parsed.pages:
                             blocks = []
+                            headings = []
+                            texts = []
                             for el in p.elements:
                                 if hasattr(el, "content") and getattr(el, "bbox", None):
                                     b = el.bbox
                                     blocks.append((b[0], b[1], b[2], b[3], el.content))
+                                    texts.append(el.content)
+                                    if getattr(el, "is_heading", False) or getattr(el, "category", "") in ("heading", "title", "header"):
+                                        headings.append(el.content)
                             page_text_blocks_for_caps[p.page_number] = self.asset_processor.caption_detector.find_captions_on_page(blocks)
+                            page_headings_map[p.page_number] = headings
+                            page_nearby_text_map[p.page_number] = " ".join(texts[:5])
 
                         # Clean existing DocumentAssets for this document version
                         session.execute(
@@ -716,23 +732,39 @@ class IngestionPipeline:
                             )
                         )
 
+                        doc_title = getattr(parsed, "title", None) or doc.filename
+
                         for fig in parsed.figures:
+                            p_num = fig.page_number
+                            sec_heading = page_headings_map.get(p_num, [""])[0] if page_headings_map.get(p_num) else None
+                            nearby_ctx = page_nearby_text_map.get(p_num, "")
+
                             cand = ExtractedVisualCandidate(
                                 asset_id=fig.asset_id or str(uuid4()),
                                 document_id=doc_id,
                                 version=doc.version,
-                                page_number=fig.page_number,
+                                page_number=p_num,
                                 bbox=fig.bbox or (0.0, 0.0, 0.0, 0.0),
                                 image_bytes=fig.image_bytes or b"",
                                 mime_type=fig.mime_type,
                                 width=fig.width,
                                 height=fig.height,
                                 source_type=fig.metadata.get("source_type", "digital_embedded"),
+                                nearby_text=nearby_ctx,
+                                section_heading=sec_heading,
                             )
+
+                            context_info = AssetContextInfo(
+                                document_title=doc_title,
+                                section_heading=sec_heading,
+                                nearby_text=nearby_ctx,
+                            )
+
                             processed = self.asset_processor.process_candidate(
                                 candidate=cand,
                                 tenant_id=doc.tenant_id,
-                                captions_on_page=page_text_blocks_for_caps.get(fig.page_number, []),
+                                captions_on_page=page_text_blocks_for_caps.get(p_num, []),
+                                context=context_info,
                             )
                             if processed:
                                 processed_assets.append(processed)
@@ -746,6 +778,7 @@ class IngestionPipeline:
                                     asset_subtype=a_schema.asset_subtype,
                                     storage_uri=a_schema.storage_uri,
                                     content_hash=a_schema.content_hash,
+                                    perceptual_hash=a_schema.perceptual_hash,
                                     bbox=a_schema.bbox,
                                     width=a_schema.width,
                                     height=a_schema.height,
@@ -756,7 +789,11 @@ class IngestionPipeline:
                                     semantic_description=a_schema.semantic_description,
                                     entities=a_schema.entities,
                                     relationships=a_schema.relationships,
+                                    relevance_score=a_schema.relevance_score,
+                                    relevance_reason=a_schema.relevance_reason,
+                                    indexing_policy=a_schema.indexing_policy.value if hasattr(a_schema.indexing_policy, "value") else str(a_schema.indexing_policy),
                                     processing_status=a_schema.processing_status,
+                                    processing_error=a_schema.processing_error,
                                     processor_version=a_schema.processor_version,
                                     asset_metadata=a_schema.asset_metadata,
                                 )
@@ -768,6 +805,19 @@ class IngestionPipeline:
                                 start_chunk_index=len(all_chunks),
                             )
                             all_chunks.extend(figure_chunks)
+
+                        metrics_dict = self.asset_processor.metrics.to_dict()
+                        logger.info(
+                            "Document '%s' asset processing complete: %d extracted, %d stored, %d duplicates, %d OCR, %d vision analyzed, %d store-only, %d chunks created.",
+                            doc.filename,
+                            metrics_dict["total_extracted"],
+                            metrics_dict["stored_minio"],
+                            metrics_dict["duplicates_detected"],
+                            metrics_dict["ocr_processed"],
+                            metrics_dict["vision_analyzed"],
+                            metrics_dict["store_only"],
+                            metrics_dict["embedded_chunks"],
+                        )
 
                     # 3d. Normalize sequential chunk_index
                     for idx, c in enumerate(all_chunks):

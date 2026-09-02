@@ -26,6 +26,7 @@ class MockVisionProvider(BaseVisionProvider):
         ocr_text: Optional[str] = None,
         asset_type: AssetType = AssetType.FIGURE,
         mime_type: str = "image/png",
+        context: Optional[Any] = None,
     ) -> FigureAnalysisResult:
         """Generate structured deterministic semantic analysis."""
         title = caption or f"{asset_type.value} illustration"

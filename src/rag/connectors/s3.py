@@ -73,8 +73,8 @@ class S3Connector(BaseSourceConnector):
             for page in page_iterator:
                 for obj in page.get("Contents", []):
                     key = obj["Key"]
-                    # Skip directory marker keys
-                    if key.endswith("/"):
+                    # Skip directory marker keys and internal pipeline storage artifacts
+                    if key.endswith("/") or key.startswith("storage/"):
                         continue
 
                     last_modified = obj.get("LastModified")

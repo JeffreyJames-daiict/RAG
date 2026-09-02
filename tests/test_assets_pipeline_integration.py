@@ -66,7 +66,13 @@ def test_pipeline_end_to_end_figure_processing(temp_workspace):
     db.create_tables()
 
     raw_backend = LocalRawStorageBackend(base_dir=raw_dir)
-    pipeline = IngestionPipeline(db_manager=db, raw_storage=raw_backend)
+    from rag.assets.processor import AssetProcessor
+    from rag.core.config import AssetConfig, VisionConfig
+    asset_proc = AssetProcessor(
+        config=AssetConfig(vision=VisionConfig(provider="mock")),
+        storage_backend=raw_backend,
+    )
+    pipeline = IngestionPipeline(db_manager=db, raw_storage=raw_backend, asset_processor=asset_proc)
 
     connector = LocalFileConnector(base_dir=docs_dir, allowed_extensions={".pdf"})
     pipeline.register_connector("local", connector)

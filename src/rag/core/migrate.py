@@ -35,6 +35,13 @@ def _prepare_schemas(engine) -> None:
                         ALTER TABLE public.embeddings ADD COLUMN IF NOT EXISTS dimension INTEGER;
                         ALTER TABLE public.embeddings ADD COLUMN IF NOT EXISTS provider VARCHAR(64);
                     END IF;
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'document_assets') THEN
+                        ALTER TABLE public.document_assets ADD COLUMN IF NOT EXISTS perceptual_hash VARCHAR(64);
+                        ALTER TABLE public.document_assets ADD COLUMN IF NOT EXISTS relevance_score DOUBLE PRECISION;
+                        ALTER TABLE public.document_assets ADD COLUMN IF NOT EXISTS relevance_reason TEXT;
+                        ALTER TABLE public.document_assets ADD COLUMN IF NOT EXISTS indexing_policy VARCHAR(32) NOT NULL DEFAULT 'STORE_ONLY';
+                        ALTER TABLE public.document_assets ADD COLUMN IF NOT EXISTS processing_error TEXT;
+                    END IF;
                 END $$;
             """))
             conn.commit()
@@ -57,6 +64,24 @@ def _prepare_schemas(engine) -> None:
                 existing_cols = {row[1] for row in res}
                 if existing_cols and "asset_id" not in existing_cols:
                     conn.execute(text("ALTER TABLE chunk_metadata ADD COLUMN asset_id VARCHAR(128)"))
+                    conn.commit()
+            except Exception:
+                pass
+
+            try:
+                res = conn.execute(text("PRAGMA table_info(document_assets)")).fetchall()
+                existing_cols = {row[1] for row in res}
+                if existing_cols:
+                    if "perceptual_hash" not in existing_cols:
+                        conn.execute(text("ALTER TABLE document_assets ADD COLUMN perceptual_hash VARCHAR(64)"))
+                    if "relevance_score" not in existing_cols:
+                        conn.execute(text("ALTER TABLE document_assets ADD COLUMN relevance_score FLOAT"))
+                    if "relevance_reason" not in existing_cols:
+                        conn.execute(text("ALTER TABLE document_assets ADD COLUMN relevance_reason TEXT"))
+                    if "indexing_policy" not in existing_cols:
+                        conn.execute(text("ALTER TABLE document_assets ADD COLUMN indexing_policy VARCHAR(32) DEFAULT 'STORE_ONLY'"))
+                    if "processing_error" not in existing_cols:
+                        conn.execute(text("ALTER TABLE document_assets ADD COLUMN processing_error TEXT"))
                     conn.commit()
             except Exception:
                 pass

@@ -45,7 +45,7 @@ class FigureOCRRunner:
         try:
             pil_img = Image.open(io.BytesIO(image_bytes))
             # Preprocess for clean diagram text extraction
-            processed_img, _ = self.preprocessor.process(pil_img, profile_name="standard")
+            processed_img = self.preprocessor.preprocess(pil_img, profile="standard")
 
             # Execute OCR with sparse text / diagram PSM options (PSM 11 or 3)
             page_res = self.ocr_provider.process_page(

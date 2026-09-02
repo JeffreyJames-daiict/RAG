@@ -12,10 +12,9 @@
     "echo": false
   },
   "storage": {
-    "backend_type": "minio",
+    "backend_type": "database",
     "raw_schema": "raw",
-    "verify_on_read": true,
-    "s3_storage_prefix": "storage"
+    "verify_on_read": true
   },
   "parser": {
     "version": "pymupdf-v1.0",
@@ -76,6 +75,7 @@
   },
   "asset": {
     "enabled": true,
+    "storage_backend_type": "minio",
     "min_image_width": 64,
     "min_image_height": 64,
     "min_image_area": 4096,
@@ -85,12 +85,34 @@
     "caption_vertical_distance_pts": 60.0,
     "figure_ocr_enabled": true,
     "figure_ocr_min_confidence": 0.40,
+    "relevance_enabled": true,
+    "analyze_threshold": 0.65,
+    "store_only_threshold": 0.35,
+    "ocr_only_threshold": 0.50,
+    "max_vision_calls_per_document": 20,
+    "dedup_enabled": true,
+    "perceptual_hash_enabled": true,
+    "phash_hamming_distance_threshold": 5,
+    "weights": {
+      "caption": 0.20,
+      "figure_label": 0.10,
+      "technical_ocr": 0.20,
+      "meaningful_ocr_length": 0.10,
+      "technical_context": 0.10,
+      "informative_aspect_size": 0.05,
+      "large_page_coverage": 0.05,
+      "repeated_asset_penalty": -0.25,
+      "logo_penalty": -0.40,
+      "watermark_penalty": -0.50,
+      "tiny_icon_penalty": -0.50,
+      "empty_ocr_penalty": -0.05
+    },
     "vision": {
       "enabled": true,
-      "provider": "mock",
-      "model": "gpt-4o",
-      "api_key": "${OPENAI_API_KEY:-}",
-      "endpoint_url": null,
+      "provider": "openrouter/free",
+      "model": "google/gemini-2.0-flash-lite-preview-02-05:free",
+      "api_key": "${OPENROUTER_API_KEY:-}",
+      "endpoint_url": "https://openrouter.ai/api/v1/chat/completions",
       "timeout_sec": 45.0,
       "max_retries": 2,
       "retry_backoff_sec": 1.0,

@@ -348,9 +348,29 @@ class VisionConfig(BaseModel):
     extract_relationships: bool = Field(default=True, description="Extract structured entity relationships/connections")
 
 
+class RelevanceWeightsConfig(BaseModel):
+    """Configurable scoring weights for heuristic figure relevance classification."""
+    caption: float = Field(default=0.20, description="Score boost when a figure caption is detected")
+    figure_label: float = Field(default=0.10, description="Score boost for explicit 'Figure X / Fig. X' labels")
+    technical_ocr: float = Field(default=0.20, description="Score boost when technical keywords/terms exist in OCR text")
+    meaningful_ocr_length: float = Field(default=0.10, description="Score boost for substantial text inside figure (>= 5 words)")
+    technical_context: float = Field(default=0.10, description="Score boost when surrounding section/paragraph is technical")
+    informative_aspect_size: float = Field(default=0.05, description="Score boost for balanced aspect ratio and substantial area")
+    large_page_coverage: float = Field(default=0.05, description="Score boost if figure occupies significant page portion (>= 20%)")
+    repeated_asset_penalty: float = Field(default=-0.25, description="Score penalty if asset is repeated across multiple pages")
+    logo_penalty: float = Field(default=-0.40, description="Score penalty if asset exhibits logo characteristics")
+    watermark_penalty: float = Field(default=-0.50, description="Score penalty for low-contrast/watermark-like assets")
+    tiny_icon_penalty: float = Field(default=-0.50, description="Score penalty for tiny icons / bullets")
+    empty_ocr_penalty: float = Field(default=-0.05, description="Score penalty if OCR detected zero text")
+
+
 class AssetConfig(BaseModel):
     """Configuration for document asset, figure, diagram, and image processing."""
     enabled: bool = Field(default=True, description="Enable visual asset / figure processing")
+    storage_backend_type: Optional[str] = Field(
+        default="minio",
+        description="Dedicated storage provider for visual assets/figures: minio | s3 | database | local",
+    )
     min_image_width: int = Field(default=64, ge=8, description="Minimum image width in pixels to consider as an asset")
     min_image_height: int = Field(default=64, ge=8, description="Minimum image height in pixels to consider as an asset")
     min_image_area: int = Field(default=4096, ge=64, description="Minimum image area in pixels (width * height)")
@@ -360,6 +380,15 @@ class AssetConfig(BaseModel):
     caption_vertical_distance_pts: float = Field(default=60.0, ge=5.0, le=300.0, description="Max vertical distance in points to associate caption with figure")
     figure_ocr_enabled: bool = Field(default=True, description="Run OCR on extracted figures to capture text elements")
     figure_ocr_min_confidence: float = Field(default=0.40, ge=0.0, le=1.0, description="Minimum confidence score for figure OCR words")
+    relevance_enabled: bool = Field(default=True, description="Enable intelligent relevance scoring before vision analysis")
+    analyze_threshold: float = Field(default=0.65, ge=0.0, le=1.0, description="Relevance score threshold >= which triggers Vision semantic analysis")
+    store_only_threshold: float = Field(default=0.35, ge=0.0, le=1.0, description="Relevance score threshold < which asset is STORE_ONLY (no vision/embedding)")
+    ocr_only_threshold: float = Field(default=0.50, ge=0.0, le=1.0, description="Relevance score threshold for OCR_ONLY indexing if vision is skipped")
+    max_vision_calls_per_document: int = Field(default=20, ge=1, le=100, description="Safety budget on max vision API calls per document")
+    dedup_enabled: bool = Field(default=True, description="Enable exact SHA-256 and perceptual hash deduplication")
+    perceptual_hash_enabled: bool = Field(default=True, description="Enable 64-bit perceptual hashing (pHash/dHash) for visual deduplication")
+    phash_hamming_distance_threshold: int = Field(default=5, ge=0, le=64, description="Max hamming distance to treat two images as perceptual duplicates")
+    weights: RelevanceWeightsConfig = Field(default_factory=RelevanceWeightsConfig, description="Relevance scoring feature weights")
     vision: VisionConfig = Field(default_factory=VisionConfig, description="Vision analysis settings")
 
 

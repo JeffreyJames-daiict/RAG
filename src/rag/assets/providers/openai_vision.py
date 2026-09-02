@@ -41,6 +41,7 @@ class OpenAIVisionProvider(BaseVisionProvider):
         ocr_text: Optional[str] = None,
         asset_type: AssetType = AssetType.FIGURE,
         mime_type: str = "image/png",
+        context: Optional[Any] = None,
     ) -> FigureAnalysisResult:
         """Call OpenAI Vision API to analyze image and return structured semantic representation."""
         if not self.api_key:
@@ -59,8 +60,21 @@ class OpenAIVisionProvider(BaseVisionProvider):
             "Respond ONLY with valid JSON."
         )
 
+        context_lines = [
+            f"Asset Type: {asset_type.value}",
+            f"Caption: {caption or 'None'}",
+            f"OCR Text Detected: {ocr_text or 'None'}",
+        ]
+        if context:
+            if hasattr(context, "document_title") and context.document_title:
+                context_lines.append(f"Document Title: {context.document_title}")
+            if hasattr(context, "section_heading") and context.section_heading:
+                context_lines.append(f"Section Heading: {context.section_heading}")
+            if hasattr(context, "nearby_text") and context.nearby_text:
+                context_lines.append(f"Nearby Text: {context.nearby_text}")
+
         user_content = [
-            {"type": "text", "text": f"Asset Type: {asset_type.value}\nCaption: {caption or 'None'}\nOCR Text Detected: {ocr_text or 'None'}\nPlease analyze this figure in detail."},
+            {"type": "text", "text": "\n".join(context_lines) + "\nPlease analyze this figure in technical detail."},
             {"type": "image_url", "image_url": {"url": data_uri, "detail": "high"}},
         ]
 

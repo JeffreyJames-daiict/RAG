@@ -887,6 +887,12 @@ class DocumentAsset(Base):
         index=True,
         doc="SHA-256 hash of extracted image bytes for deduplication & idempotency",
     )
+    perceptual_hash: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+        doc="Perceptual hash (pHash/dHash) for visual deduplication and duplicate asset detection",
+    )
     bbox: Mapped[Optional[Dict[str, Any]]] = mapped_column(
         JSON,
         nullable=True,
@@ -942,12 +948,34 @@ class DocumentAsset(Base):
         default=list,
         doc="Extracted directed relationships/connections between entities",
     )
+    relevance_score: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Heuristic relevance score between 0.0 (noise) and 1.0 (highly relevant)",
+    )
+    relevance_reason: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        doc="Explanation of why asset was scored and assigned its indexing policy",
+    )
+    indexing_policy: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="STORE_ONLY",
+        index=True,
+        doc="Indexing policy: IGNORE, STORE_ONLY, OCR_ONLY, VISION_ANALYSIS, FULL_MULTIMODAL",
+    )
     processing_status: Mapped[str] = mapped_column(
         String(32),
         nullable=False,
         default="READY",
         index=True,
-        doc="Asset lifecycle status (EXTRACTED, CLASSIFIED, OCR_COMPLETED, VISION_COMPLETED, READY, FAILED, LOW_QUALITY)",
+        doc="Asset lifecycle status (EXTRACTED, HASHED, CLASSIFIED, OCR_COMPLETED, VISION_COMPLETED, READY, FAILED, LOW_QUALITY)",
+    )
+    processing_error: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        doc="Error message if any stage of asset processing failed",
     )
     processor_version: Mapped[str] = mapped_column(
         String(64),
