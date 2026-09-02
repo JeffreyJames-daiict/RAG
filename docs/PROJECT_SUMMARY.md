@@ -1,6 +1,6 @@
 # Enterprise RAG Pipeline — Project Summary
 
-A modular, production-grade **Retrieval-Augmented Generation (RAG)** pipeline in Python featuring multi-source ingestion, intelligent OCR, table extraction, content normalization, hierarchical chunking, and incremental database synchronization.
+A modular, production-grade **Retrieval-Augmented Generation (RAG)** pipeline in Python featuring multi-source ingestion, intelligent OCR, table extraction, visual asset relevance classification, selective vision analysis, content normalization, hierarchical chunking, dense vector embeddings, and incremental database synchronization.
 
 ---
 
@@ -15,7 +15,7 @@ A modular, production-grade **Retrieval-Augmented Generation (RAG)** pipeline in
                                      ▼
  ┌────────────────────────────────────────────────────────────────────────┐
  │                         2. RAW STORAGE ENGINE                          │
- │         Local Filesystem Storage  /  Database BLOB Storage             │
+ │         Local Filesystem Storage  /  S3 / MinIO Object Storage         │
  │         (SHA-256 Hash Verification & Content Deduplication)            │
  └───────────────────────────────────┬────────────────────────────────────┘
                                      │
@@ -26,7 +26,7 @@ A modular, production-grade **Retrieval-Augmented Generation (RAG)** pipeline in
  │   • Preprocessing (Deskewing, Binarization, Contrast, DPI Scaling)     │
  │   • Multi-Provider Engine (Tesseract, EasyOCR, DocTR, Cloud Stubs)     │
  │   • Quality Evaluator & Adaptive Retry Progression                     │
- │   • Language Detection & Routing                                       │
+ │   • Language Detection & Multi-Lingual Routing                         │
  └───────────────────────────────────┬────────────────────────────────────┘
                                      │
                                      ▼
@@ -40,7 +40,21 @@ A modular, production-grade **Retrieval-Augmented Generation (RAG)** pipeline in
                                      │
                                      ▼
  ┌────────────────────────────────────────────────────────────────────────┐
- │                   5. NORMALIZATION & DEDUPLICATION                     │
+ │      5. VISUAL ASSET INTELLIGENCE & SELECTIVE VISION ANALYSIS          │
+ │   • Extracted Figure / Diagram Ingestion & Storage (MinIO)             │
+ │   • Exact SHA-256 & 64-bit Perceptual Hash (dHash) Deduplication       │
+ │   • Cheap Candidate Classification (Logos, Icons, Watermarks, Diagrams)│
+ │   • Spatial Caption Association & Document Context Propagation         │
+ │   • Targeted Figure OCR & Technical Terminology Analysis               │
+ │   • Heuristic Relevance Scorer & Policy Routing:                       │
+ │       - STORE_ONLY / IGNORE: Preserved in MinIO for audit only         │
+ │       - OCR_ONLY: Text chunk from OCR & Caption                        │
+ │       - VISION_ANALYSIS: Structured Multi-modal OpenRouter Analysis    │
+ └───────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     ▼
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │                   6. NORMALIZATION & DEDUPLICATION                     │
  │   • Unicode NFKC Normalization & Ligature Unrolling                    │
  │   • Cross-Page Header / Footer Repetitive Pattern Stripping            │
  │   • OCR Artifact & Typo Correction Heuristics                          │
@@ -49,18 +63,27 @@ A modular, production-grade **Retrieval-Augmented Generation (RAG)** pipeline in
                                      │
                                      ▼
  ┌────────────────────────────────────────────────────────────────────────┐
- │                     6. CHUNKING & STRUCTURAL SPLIT                     │
+ │                     7. CHUNKING & STRUCTURAL SPLIT                     │
  │   • Recursive Text Chunker (tiktoken token-aware with overlap)         │
  │   • Specialized Table Row & Header Preserving Chunker                  │
- │   • Positional Metadata (Page, Section, Hierarchy, Coordinates)        │
+ │   • Semantic Figure Chunker (Only for Indexable Visual Policies)       │
+ │   • Positional Metadata (Page, Section, Hierarchy, Coordinates, URI)   │
  └───────────────────────────────────┬────────────────────────────────────┘
                                      │
                                      ▼
  ┌────────────────────────────────────────────────────────────────────────┐
- │                  7. DATA MODELS & INCREMENTAL SYNC                     │
+ │                  8. DATA MODELS & INCREMENTAL SYNC                     │
  │   • Documents & Document Versions (Change-Data-Capture via Hashes)     │
- │   • Chunks & Embeddings Persistence                                    │
+ │   • Chunks, Document Assets & Embeddings Persistence                   │
  │   • SQLAlchemy 2.0 ORM + Pydantic v2 Validation                        │
+ └───────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     ▼
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │                       9. DENSE EMBEDDING SERVICE                       │
+ │   • BaseEmbeddingProvider (Mock & OpenAI Providers)                    │
+ │   • Vector Dimensionality & Validation (NaN / Inf Rejection)           │
+ │   • Batch Processing, Exponential Backoff Retries & Idempotency        │
  └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -70,15 +93,15 @@ A modular, production-grade **Retrieval-Augmented Generation (RAG)** pipeline in
 
 | Module | Location | Description |
 |---|---|---|
-| **Core Models** | `src/rag/core/` | 5 production tables (`documents`, `document_versions`, `chunks`, `document_assets`, `embeddings`), Pydantic schemas, and unified exceptions. |
-| **Connectors** | `src/rag/connectors/` | `BaseSourceConnector`, `LocalFileConnector`, `S3Connector`, `WebConnector`, `DatabaseConnector`. |
-| **Raw Storage** | `src/rag/storage/` | `LocalRawDocumentStorage`, `DatabaseRawDocumentStorage` with SHA-256 integrity checks and deterministic asset paths. |
-| **OCR Engine** | `src/rag/ocr/` | Page quality analysis, image preprocessing, multi-provider OCR, adaptive retries, and language detection. |
+| **Core Models** | `src/rag/core/` | 5 production tables (`documents`, `document_versions`, `chunks`, `document_assets`, `embeddings`), Pydantic schemas (`DocumentAssetSchema` with `perceptual_hash`, `relevance_score`, `indexing_policy`), and unified exceptions. |
+| **Connectors** | `src/rag/connectors/` | `BaseSourceConnector`, `LocalFileConnector`, `S3Connector` (MinIO/AWS S3), `WebConnector`, `DatabaseConnector`. |
+| **Raw Storage** | `src/rag/storage/` | `LocalRawDocumentStorage`, `S3RawStorageBackend` (MinIO/S3), `DatabaseRawDocumentStorage` with SHA-256 integrity checks and deterministic storage keys. |
+| **OCR Engine** | `src/rag/ocr/` | Page quality analysis, image preprocessing profiles (`minimal`, `standard`, `aggressive`), multi-provider OCR, adaptive retries, and language detection. |
 | **Parsing** | `src/rag/parsing/` | PDF layout parsing, multi-column reading order, hierarchical structure detection, table extraction & table chunking. |
+| **Visual Assets** | `src/rag/assets/` | Extracted figure storage, SHA-256 + 64-bit dHash deduplication, frequency tracking, cheap classification, spatial caption association, figure OCR, OpenRouter / OpenAI vision models, heuristic relevance scoring, policy routing (`STORE_ONLY`, `OCR_ONLY`, `VISION_ANALYSIS`), and selective figure chunking. |
 | **Normalization** | `src/rag/normalization/` | Text cleaning, header/footer suppression, OCR error correction, digital-vs-OCR duplicate resolution. |
-| **Visual Assets** | `src/rag/assets/` | Digital PDF embedded image extraction, scanned figure region detection, classification, spatial caption association, figure OCR, vision analysis (entities & relationships), storage, and semantic figure chunking. |
 | **Embeddings** | `src/rag/embeddings/` | Provider abstraction (`BaseEmbeddingProvider`), Mock & OpenAI providers, `EmbeddingValidator`, `EmbeddingService`, batching, retries, idempotency, and transactional persistence. |
-| **Ingestion** | `src/rag/ingestion/` | `IngestionPipeline` coordinating end-to-end ingestion, hash-based change detection, table/figure chunking, and embedding generation. |
+| **Ingestion** | `src/rag/ingestion/` | `IngestionPipeline` coordinating end-to-end ingestion, hash-based change detection, table/figure chunking, selective vision analysis, and embedding generation. |
 
 ---
 
@@ -87,20 +110,24 @@ A modular, production-grade **Retrieval-Augmented Generation (RAG)** pipeline in
 1. **`documents`**: Primary document record, tenant isolation, source URI, active version, status (`DISCOVERED`, `FETCHED`, `PARSED`, `CHUNKED`, `INDEXED`, `FAILED`), and latest content hash.
 2. **`document_versions`**: Immutable historical version snapshots, content hashes, parser versions, and raw artifact paths.
 3. **`chunks`**: Text blocks, section paths, page numbers, positional metadata, and chunking strategy version.
-4. **`document_assets`**: Extracted figures, diagrams, architecture illustrations, charts, bounding boxes, storage URIs, captions, OCR text, semantic descriptions, entities, relationships, and processing statuses.
+4. **`document_assets`**: Extracted figures, diagrams, architecture illustrations, charts, bounding boxes, storage URIs (MinIO/local), captions, OCR text, semantic descriptions, entities, relationships, `perceptual_hash`, `relevance_score`, `relevance_reason`, `indexing_policy`, `processing_error`, and lifecycle statuses.
 5. **`embeddings`**: Dense vector representation (JSON float list), model identifier, model version, dimensionality, and provider tag.
 
 ---
 
 ## 4. Test Suite Status
 
-All **197 test cases** across 23 test suites are currently passing:
+All **211 test cases** across 26 test suites are currently passing:
 
 ```bash
 $ pytest -v
-============================= 197 passed in 14.91s =============================
+============================= 211 passed in 19.81s =============================
 ```
 
+- `test_assets_deduplication.py`: SHA-256 and pure-PIL 64-bit perceptual hash (`dHash`), hamming distance, frequency tracking, and analysis cache.
+- `test_assets_relevance.py`: Heuristic relevance scoring, weights, technical OCR keywords boost, logo/icon penalties, and `IndexingPolicy` assignment.
+- `test_assets_selective_vision.py`: Selective vision routing, chunk generation filtering (`STORE_ONLY` vs `VISION_ANALYSIS`), and safety call budgets.
+- `test_assets_openrouter.py`: OpenRouter free vision models candidate failover and contextual structured output extraction.
 - `test_assets_extraction.py`: Digital PDF embedded image extraction, scanned page figure detection & cropping, bbox calculations.
 - `test_assets_classification.py`: Logo/icon filtering vs diagram/chart/architecture classification.
 - `test_assets_caption.py`: Caption detection and spatial figure association.
@@ -123,3 +150,4 @@ $ pytest -v
 - `test_normalization.py`: Text cleaning, header/footer removal, and duplicate resolution.
 - `test_incremental_ingestion.py`: Hash-based change detection and versioning.
 - `test_config.py`: Configuration loading, validation, and environment overrides.
+

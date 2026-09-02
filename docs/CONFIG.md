@@ -94,6 +94,31 @@ All configuration for this Enterprise RAG repository is centralized in [`configs
 | `chunking_version` | string | Version tag stored on `chunks` rows. Bump when chunking parameters change to enable differential chunk re-indexing. |
 | `encoding_model` | string | `tiktoken` tokenizer model used for token counting (default: `cl100k_base`). |
 
+### 🖼️ `asset` (Visual Asset Extraction & Selective Vision)
+| Field | Type | Description |
+|---|---|---|
+| `enabled` | boolean | Master toggle for PDF figure/image extraction and processing (default: `true`). |
+| `relevance_enabled` | boolean | Enables intelligent heuristic scoring & indexing policy selection (default: `true`). |
+| `analyze_threshold` | float | Minimum score (`[0.0, 1.0]`) to route visual asset to full Vision AI analysis (default: `0.65`). |
+| `store_only_threshold` | float | Score below which low-value assets are marked `STORE_ONLY` and skip search indexing (default: `0.35`). |
+| `ocr_only_threshold` | float | Minimum score to generate text chunk from OCR and Caption alone (default: `0.50`). |
+| `max_vision_calls_per_document` | integer | Per-document safety budget for vision LLM API invocations (default: `20`). |
+| `dedup_enabled` | boolean | Enables SHA-256 byte deduplication and analysis result caching (default: `true`). |
+| `perceptual_hash_enabled` | boolean | Enables 64-bit gradient difference hash (`dHash`) detection for scaled/recompressed images (default: `true`). |
+| `phash_hamming_distance_threshold` | integer | Maximum bit difference to treat two images as perceptual duplicates (default: `5`). |
+| `storage_backend_type` | string | Storage backend for visual images: `minio` or `local` (default: `minio`). |
+| `figure_ocr_enabled` | boolean | Runs targeted Tesseract OCR on candidate figures for technical keyword detection (default: `true`). |
+| `vision.provider` | string | Vision AI provider: `openrouter/free` (auto-routing across free models), `openai`, `mock` (default: `openrouter/free`). |
+
+### 🧠 `embedding`
+| Field | Type | Description |
+|---|---|---|
+| `provider` | string | Embedding provider (`mock`, `openai`). |
+| `model` | string | Model name (e.g. `text-embedding-3-small`). |
+| `dimension` | integer | Vector dimension (e.g. `1536`). |
+| `batch_size` | integer | Chunk batching size for API calls (default: `64`). |
+| `auto_embed` | boolean | Automatically embed chunks during `parse_and_chunk` (default: `true`). |
+
 ### ⚙️ `pipeline`
 | Field | Type | Description |
 |---|---|---|
