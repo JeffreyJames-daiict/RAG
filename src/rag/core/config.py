@@ -332,6 +332,33 @@ class EmbeddingConfig(BaseModel):
     )
     api_key: Optional[str] = Field(default=None, description="Provider API key (e.g. OPENAI_API_KEY)")
     endpoint_url: Optional[str] = Field(default=None, description="Custom API endpoint URL for self-hosted/proxy")
+    allow_mock: bool = Field(
+        default_factory=lambda: os.getenv(
+            "EMBEDDING_ALLOW_MOCK",
+            "true" if os.getenv("APP_ENV", "development").lower() != "production" else "false"
+        ).lower() in ("1", "true", "yes"),
+        description="Explicitly allow mock embedding provider in non-production environments",
+    )
+    fail_on_provider_error: bool = Field(
+        default_factory=lambda: os.getenv("EMBEDDING_FAIL_ON_PROVIDER_ERROR", "true").lower() in ("1", "true", "yes"),
+        description="Fail immediately on provider error instead of falling back to dummy embeddings",
+    )
+
+    def safe_diagnostic_dict(self, is_production: bool = False) -> Dict[str, Any]:
+        """Return safe, non-sensitive diagnostic dictionary of embedding configuration."""
+        return {
+            "embedding_provider": self.provider,
+            "embedding_model": self.model,
+            "embedding_model_version": self.model_version,
+            "embedding_dimension": self.dimension,
+            "embedding_api_base": self.endpoint_url or (
+                "https://api.openai.com/v1/embeddings" if self.provider.lower() == "openai" else "none"
+            ),
+            "embedding_api_key_configured": bool(self.api_key),
+            "embedding_allow_mock": self.allow_mock,
+            "embedding_fail_on_provider_error": self.fail_on_provider_error,
+            "mode": "production" if is_production else "development",
+        }
 
 
 class VisionConfig(BaseModel):

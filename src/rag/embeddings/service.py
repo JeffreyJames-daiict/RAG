@@ -51,8 +51,13 @@ class EmbeddingService:
     ):
         self.db_manager = db_manager
         self.config = config or get_settings().embedding
-        self.provider = provider or get_embedding_provider(self.config)
+        try:
+            is_prod = get_settings().app.is_production
+        except Exception:
+            is_prod = False
+        self.provider = provider or get_embedding_provider(self.config, is_production=is_prod)
         self.validator = EmbeddingValidator(expected_dimension=self.provider.dimension)
+        self.total_persistence_mismatches = 0
 
         # Initialize tokenizer for token validation and safe truncation
         try:
@@ -264,6 +269,31 @@ class EmbeddingService:
             )
 
         result.duration_ms = (time.time() - start_time) * 1000.0
+
+        # Safe structured observability logging (no raw content or secrets)
+        vectors = [r.vector for r in result.successful_results]
+        _, dup_ratio = EmbeddingValidator.calculate_duplicate_stats(vectors)
+        invalid_count = sum(
+            1 for f in result.failed_chunks if "Validation" in f.error_type or "Dimension" in f.error_type
+        )
+        zero_count = sum(1 for f in result.failed_chunks if "ZeroVector" in f.error_type)
+
+        metrics = {
+            "embedding_provider": self.provider_name,
+            "embedding_model": self.model_name,
+            "embedding_dimension": self.dimension,
+            "embedding_batch_size": len(tasks),
+            "embedding_latency_ms": round(result.duration_ms, 2),
+            "embedding_retry_count": sum(f.retry_count for f in result.failed_chunks),
+            "embedding_failure_count": len(result.failed_chunks),
+            "embedding_mock_mode": (self.provider_name == "mock"),
+            "embedding_duplicate_ratio": round(dup_ratio, 4),
+            "embedding_zero_vector_count": zero_count,
+            "embedding_invalid_vector_count": invalid_count,
+            "embedding_persistence_mismatch_count": getattr(self, "total_persistence_mismatches", 0),
+        }
+        logger.info("Embedding batch metrics: %s", metrics)
+
         return result
 
     # ------------------------------------------------------------------

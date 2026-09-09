@@ -41,3 +41,23 @@ class EmbeddingInputTooLargeError(EmbeddingError):
 class EmbeddingPersistenceError(EmbeddingError):
     """Raised when persisting embedding records to the database fails."""
     pass
+
+
+class EmbeddingConfigurationError(EmbeddingError):
+    """Raised when invalid or disallowed embedding configuration is detected (e.g. mock in production)."""
+    pass
+
+
+class EmbeddingZeroVectorError(EmbeddingValidationError):
+    """Raised when an embedding vector contains all zeros."""
+    pass
+
+
+class EmbeddingConstantVectorError(EmbeddingValidationError):
+    """Raised when an embedding vector contains identical/constant values."""
+    pass
+
+
+class EmbeddingMockDetectedError(EmbeddingError):
+    """Raised when mock or dummy embeddings are unexpectedly detected."""
+    pass

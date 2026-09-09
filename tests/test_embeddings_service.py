@@ -100,7 +100,7 @@ def test_service_batch_fallback_on_single_chunk_failure(db_mgr):
             raise RuntimeError("Batch request failed!")
         if "bad" in texts[0]:
             raise ValueError("Corrupt text input")
-        return [[0.1] * 32]
+        return [[0.1 + i * 0.01 for i in range(32)]]
 
     mock_provider.embed_batch.side_effect = fake_embed_batch
 

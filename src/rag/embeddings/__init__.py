@@ -1,15 +1,22 @@
-"""Embedding subsystem package."""
-
+from rag.embeddings.authenticity import (
+    EmbeddingAuthenticityChecker,
+    EmbeddingAuthenticityReport,
+    cosine_similarity,
+)
 from rag.embeddings.base import BaseEmbeddingProvider
 from rag.embeddings.exceptions import (
+    EmbeddingConfigurationError,
+    EmbeddingConstantVectorError,
     EmbeddingDimensionMismatchError,
     EmbeddingError,
     EmbeddingInputTooLargeError,
+    EmbeddingMockDetectedError,
     EmbeddingPersistenceError,
     EmbeddingProviderError,
     EmbeddingRateLimitError,
     EmbeddingTimeoutError,
     EmbeddingValidationError,
+    EmbeddingZeroVectorError,
 )
 from rag.embeddings.models import (
     BatchEmbeddingResult,
@@ -48,4 +55,11 @@ __all__ = [
     "EmbeddingDimensionMismatchError",
     "EmbeddingInputTooLargeError",
     "EmbeddingPersistenceError",
+    "EmbeddingConfigurationError",
+    "EmbeddingZeroVectorError",
+    "EmbeddingConstantVectorError",
+    "EmbeddingMockDetectedError",
+    "EmbeddingAuthenticityChecker",
+    "EmbeddingAuthenticityReport",
+    "cosine_similarity",
 ]
