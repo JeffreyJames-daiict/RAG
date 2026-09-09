@@ -17,10 +17,13 @@ from rag.connectors.base import BaseSourceConnector
 from rag.core.config import Settings, get_settings
 from rag.core.database import DatabaseManager
 from rag.core.db_models import (
+    AssetEntity,
+    AssetRelationship,
     Chunk,
     ChunkMetadata,
     Document,
     DocumentAsset,
+    DocumentPageScore,
     DocumentVersion,
     DocumentVersionMetadata,
     PipelineError,
@@ -769,6 +772,12 @@ class IngestionPipeline:
                             if processed:
                                 processed_assets.append(processed)
                                 a_schema = processed.schema
+                                bbox_dict = a_schema.bbox or {}
+                                bbox_x0 = float(bbox_dict["x0"]) if "x0" in bbox_dict and bbox_dict["x0"] is not None else None
+                                bbox_y0 = float(bbox_dict["y0"]) if "y0" in bbox_dict and bbox_dict["y0"] is not None else None
+                                bbox_x1 = float(bbox_dict["x1"]) if "x1" in bbox_dict and bbox_dict["x1"] is not None else None
+                                bbox_y1 = float(bbox_dict["y1"]) if "y1" in bbox_dict and bbox_dict["y1"] is not None else None
+
                                 db_asset = DocumentAsset(
                                     asset_id=str(a_schema.asset_id),
                                     document_id=doc_id,
@@ -780,6 +789,10 @@ class IngestionPipeline:
                                     content_hash=a_schema.content_hash,
                                     perceptual_hash=a_schema.perceptual_hash,
                                     bbox=a_schema.bbox,
+                                    bbox_x0=bbox_x0,
+                                    bbox_y0=bbox_y0,
+                                    bbox_x1=bbox_x1,
+                                    bbox_y1=bbox_y1,
                                     width=a_schema.width,
                                     height=a_schema.height,
                                     mime_type=a_schema.mime_type,
@@ -798,6 +811,25 @@ class IngestionPipeline:
                                     asset_metadata=a_schema.asset_metadata,
                                 )
                                 session.add(db_asset)
+
+                                # Relational entities & relationships
+                                for e_idx, ent_str in enumerate(a_schema.entities):
+                                    if isinstance(ent_str, str) and ent_str.strip():
+                                        session.add(AssetEntity(
+                                            asset_id=str(a_schema.asset_id),
+                                            entity_index=e_idx,
+                                            entity_name=ent_str.strip(),
+                                        ))
+
+                                for r_idx, rel_obj in enumerate(a_schema.relationships):
+                                    if isinstance(rel_obj, dict):
+                                        session.add(AssetRelationship(
+                                            asset_id=str(a_schema.asset_id),
+                                            relationship_index=r_idx,
+                                            source_entity=rel_obj.get("source", ""),
+                                            relation_type=rel_obj.get("relationship", ""),
+                                            target_entity=rel_obj.get("target", ""),
+                                        ))
 
                         if processed_assets:
                             figure_chunks = self.asset_processor.create_chunks_for_assets(
@@ -974,6 +1006,29 @@ class IngestionPipeline:
                             page_scores=page_scores,
                         )
                         session.add(doc_ver_meta)
+
+                        # Delete and insert relational DocumentPageScore records
+                        session.execute(
+                            delete(DocumentPageScore).where(
+                                DocumentPageScore.document_id == doc_id,
+                                DocumentPageScore.version == doc.version,
+                            )
+                        )
+                        for ps in page_scores:
+                            session.add(DocumentPageScore(
+                                document_id=doc_id,
+                                version=doc.version,
+                                page_number=ps.get("page_number", 1),
+                                content_source=ps.get("content_source", "native"),
+                                detected_language=ps.get("detected_language", getattr(parsed, "primary_language", "eng")),
+                                language_confidence=ps.get("language_confidence", 1.0),
+                                quality_score=ps.get("quality_score"),
+                                ocr_applied=ps.get("ocr_applied", False),
+                                ocr_confidence=ps.get("ocr_confidence"),
+                                ocr_provider=ps.get("ocr_provider"),
+                                preprocessing_profile=ps.get("preprocessing_profile"),
+                                ocr_attempt=ps.get("ocr_attempt", 1),
+                            ))
 
                     # ── Step 7: Advance status → CHUNKED ─────────────────────
                     doc.status = DocumentStatus.CHUNKED.value

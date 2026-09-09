@@ -206,6 +206,10 @@ class DocumentVersion(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    page_scores: Mapped[List["DocumentPageScore"]] = relationship(
+        "DocumentPageScore",
+        cascade="all, delete-orphan",
+    )
 
 
 class DocumentVersionMetadata(Base):
@@ -898,6 +902,26 @@ class DocumentAsset(Base):
         nullable=True,
         doc="Spatial bounding box on page {x0, y0, x1, y1}",
     )
+    bbox_x0: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Bounding box top-left X coordinate",
+    )
+    bbox_y0: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Bounding box top-left Y coordinate",
+    )
+    bbox_x1: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Bounding box bottom-right X coordinate",
+    )
+    bbox_y1: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Bounding box bottom-right Y coordinate",
+    )
     width: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -1009,10 +1033,202 @@ class DocumentAsset(Base):
         "Document",
         back_populates="assets",
     )
+    entity_records: Mapped[List["AssetEntity"]] = relationship(
+        "AssetEntity",
+        back_populates="asset",
+        cascade="all, delete-orphan",
+        order_by="AssetEntity.entity_index.asc()",
+    )
+    relationship_records: Mapped[List["AssetRelationship"]] = relationship(
+        "AssetRelationship",
+        back_populates="asset",
+        cascade="all, delete-orphan",
+        order_by="AssetRelationship.relationship_index.asc()",
+    )
 
     __table_args__ = (
         Index("ix_document_assets_doc_ver", "document_id", "version"),
     )
+
+
+class DocumentPageScore(Base):
+    """Table: document_page_scores
+
+    Stores per-page quality score, language detection, and OCR diagnostics in tabular format.
+    """
+    __tablename__ = "document_page_scores"
+
+    document_id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        doc="Foreign key to documents table",
+    )
+    version: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        doc="Document version number",
+    )
+    page_number: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        doc="1-indexed page number",
+    )
+    content_source: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="native",
+        doc="Page content source: 'native', 'scanned', 'mixed'",
+    )
+    detected_language: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="eng",
+        doc="Detected language code",
+    )
+    language_confidence: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Language identification confidence",
+    )
+    quality_score: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="Page quality score (0.0 to 1.0)",
+    )
+    ocr_applied: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        doc="True if OCR was executed on this page",
+    )
+    ocr_confidence: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+        doc="OCR text confidence score",
+    )
+    ocr_provider: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,
+        doc="OCR provider used on this page",
+    )
+    preprocessing_profile: Mapped[Optional[str]] = mapped_column(
+        String(32),
+        nullable=True,
+        doc="Preprocessing profile used",
+    )
+    ocr_attempt: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        doc="OCR retry attempt number",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        doc="Creation timestamp",
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["document_id", "version"],
+            ["document_versions.document_id", "document_versions.version"],
+            ondelete="CASCADE",
+        ),
+    )
+
+
+class AssetEntity(Base):
+    """Table: asset_entities
+
+    Tabular storage of entities extracted from document visual figures/diagrams.
+    """
+    __tablename__ = "asset_entities"
+
+    asset_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("document_assets.asset_id", ondelete="CASCADE"),
+        primary_key=True,
+        doc="Foreign key to document_assets",
+    )
+    entity_index: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        doc="Sequential order of entity within the asset",
+    )
+    entity_name: Mapped[str] = mapped_column(
+        String(512),
+        nullable=False,
+        doc="Entity name or label",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        doc="Creation timestamp",
+    )
+
+    # Relationship
+    asset: Mapped["DocumentAsset"] = relationship(
+        "DocumentAsset",
+        back_populates="entity_records",
+    )
+
+
+class AssetRelationship(Base):
+    """Table: asset_relationships
+
+    Tabular storage of relationships between entities in visual figures/diagrams.
+    """
+    __tablename__ = "asset_relationships"
+
+    relationship_id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+        doc="Unique relationship record ID",
+    )
+    asset_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("document_assets.asset_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        doc="Foreign key to document_assets",
+    )
+    relationship_index: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Sequential index of relationship",
+    )
+    source_entity: Mapped[str] = mapped_column(
+        String(512),
+        nullable=False,
+        doc="Source entity / component name",
+    )
+    relation_type: Mapped[str] = mapped_column(
+        String(512),
+        nullable=False,
+        doc="Directed connection description or relationship verb",
+    )
+    target_entity: Mapped[str] = mapped_column(
+        String(512),
+        nullable=False,
+        doc="Target entity / component name",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        doc="Creation timestamp",
+    )
+
+    # Relationship
+    asset: Mapped["DocumentAsset"] = relationship(
+        "DocumentAsset",
+        back_populates="relationship_records",
+    )
+
 
 
 
