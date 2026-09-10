@@ -23,6 +23,18 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+try:
+    from pgvector.sqlalchemy import Vector
+except ImportError:  # pragma: no cover
+    from sqlalchemy.types import UserDefinedType
+
+    class Vector(UserDefinedType):  # type: ignore[no-redef]
+        def __init__(self, dim: Optional[int] = None):
+            self.dim = dim
+
+        def get_col_spec(self, **kw: Any) -> str:
+            return f"vector({self.dim})" if self.dim else "vector"
+
 from rag.core.models import DocumentStatus, SourceType
 
 
@@ -674,6 +686,14 @@ class Embedding(Base):
         JSON,
         nullable=False,
         doc="Vector representation stored as serialized float array",
+    )
+    # Native pgvector column — populated by migration backfill for HNSW-accelerated search.
+    # Nullable for SQLite/cross-dialect compatibility; only present on PostgreSQL with pgvector.
+    embedding_vector: Mapped[Optional[Any]] = mapped_column(
+        Vector(1536),
+        nullable=True,
+        default=None,
+        doc="Native pgvector column (vector(1536)) for HNSW-accelerated similarity search",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

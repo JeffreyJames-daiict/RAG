@@ -42,16 +42,36 @@ A modular, production-grade **Retrieval-Augmented Generation** pipeline in Pytho
                                 │
                                 ▼
  ┌─────────────────────────────────────────────────────────────────────┐
- │                5. NORMALIZATION & CHUNKING                          │
+ │                6. NORMALIZATION & CHUNKING                          │
  │   Unicode NFKC → Header/Footer Strip → Token-Aware Chunking       │
  │   Text Chunks + Table Chunks + Figure Chunks                       │
  └──────────────────────────────┬──────────────────────────────────────┘
                                 │
                                 ▼
  ┌─────────────────────────────────────────────────────────────────────┐
- │              6. DATABASE MODELS & EMBEDDING SERVICE                 │
+ │              7. DATABASE MODELS & EMBEDDING SERVICE                 │
  │   SQLAlchemy 2.0 ORM + Pydantic v2 + Dense Vector Embeddings      │
  │   Incremental Sync (Hash-Based Change Detection & Versioning)      │
+ └──────────────────────────────┬──────────────────────────────────────┘
+                                │
+                                ▼
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │              8. HYBRID RETRIEVAL & RANKING ENGINE                   │
+ │   Dense Vector (pgvector/Python) + Sparse BM25 + RRF Fusion         │
+ │   Table-Aware Retrieval & Parent-Child Segment Expansion            │
+ └──────────────────────────────┬──────────────────────────────────────┘
+                                │
+                                ▼
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │              9. GROUNDED LLM ANSWER GENERATION                      │
+ │   OpenRouter Dynamic Failover & Exponential Backoff Retries        │
+ │   Numbered Citation Grounding ([1], [2]) + Transparent Streaming    │
+ └──────────────────────────────┬──────────────────────────────────────┘
+                                │
+                                ▼
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │             10. INTERACTIVE STREAMLIT STUDIO UI                     │
+ │   Multi-Mode Search, Latency Badges, Table Viewer & Corpus Explorer │
  └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -372,57 +392,170 @@ Only figures with `VISION_ANALYSIS` policy are sent to the expensive vision mode
 
 ---
 
+## 9. Hybrid Retrieval Subsystem (Dense Vector, BM25, RRF & Table Expansion)
+
+### Concept
+The retrieval layer combines the semantic generalization of **dense vector search** with the precision and exact-term recall of **sparse BM25 keyword search** using **Reciprocal Rank Fusion (RRF)**. It also includes table-aware chunk retrieval with parent-child table expansion.
+
+### How the Logic Works
+
+```
+User Query ──┬──► Dense Vector Search ──► Vector Candidates (Cosine) ──┐
+             │                                                         ├──► RRF Fusion ──► Ranked Hydrated Results
+             └──► Sparse BM25 Search   ──► BM25 Candidates (TF-IDF)   ──┘
+```
+
+1. **Dense Vector Search (`VectorRetrievalService`)**:
+   - Generates the query embedding via `EmbeddingService`.
+   - Searches chunk embeddings in PostgreSQL using `pgvector` (or automatic fallback to `PythonVectorRepository` with cosine similarity).
+   - Validates vector dimensions, finiteness, and cosine bounds $[-1.0, 1.0]$.
+2. **Sparse BM25 Search (`BM25Retriever`)**:
+   - Evaluates token frequencies using in-memory BM25 index with configurable $k_1$ (default `1.5`) and $b$ (default `0.75`).
+   - Enables exact matching on IDs, article codes, and technical jargon.
+3. **Reciprocal Rank Fusion (`RRFFusion`)**:
+   - Fuses ranked candidate lists using the formula:
+     $$\text{RRF Score}(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}$$
+     where $k=60$ and $r_m(d)$ is the 1-based rank of candidate $d$ in list $m$.
+4. **Table-Aware Retrieval (`TableAwareRetriever`)**:
+   - Searches text, tabular, and table summary chunks.
+   - `expand_parent_table(table_id, document_id)` identifies all sister chunks belonging to the same parent table (across multi-page continuations or row slices) and stitches them into a unified table context.
+5. **Metadata Filtering (`RetrievalFilters`)**:
+   - SQL clause builders and in-memory predicates for `document_ids`, `chunk_types`, `page_numbers`, `languages`, `created_after`, and JSON metadata matching.
+
+---
+
+## 10. Grounded LLM Answer Generation (OpenRouter, Retries & Model Failover)
+
+### Concept
+The generation engine (`rag.generation`) transforms retrieved context passages and user questions into grounded, natural language answers with inline numbered citations. It is built for production reliability, with automatic exponential backoff retries and dynamic candidate model rotation across OpenRouter's free tier.
+
+### How the Logic Works
+
+```
+Query + Retrieved Context Chunks ──► Prompt Construction with Provenance
+                                             │
+                                             ▼
+                                  OpenRouter Generator
+                        ┌────────────────────────────────────────┐
+                        │ Attempt Primary Model                  │
+                        │  ├── Success ──► Stream / Return Answer│
+                        │  └── 429 / 404 / 500 / Timeout         │
+                        │        ├── Retry with Backoff (2x)     │
+                        │        └── Fail? ──► Rotate to Next:   │
+                        │              1. openrouter/free        │
+                        │              2. google/gemma-4-31b-it  │
+                        │              3. google/gemma-4-26b-a4b │
+                        │              4. nemotron-3-nano-omni   │
+                        │              5. liquid/lfm-2.5-2.6b    │
+                        └────────────────────────────────────────┘
+```
+
+1. **Structured Prompt Construction (`LLMGenerationService`)**:
+   - Injects numbered citation blocks: `[1] • Source: report.pdf • Page 2 • Section: Executive Summary`.
+   - Enforces grounding guidelines: synthesizes findings strictly from retrieved passages without hallucination.
+2. **Automatic Retry with Exponential Backoff**:
+   - Transient errors (HTTP 429 rate limits, 502, 503, 504, or network timeouts) automatically retry up to `max_retries_per_model` times with backoff ($0.6 \times 2^{\text{retry}}$ seconds).
+3. **Automatic Candidate Model Rotation**:
+   - When a model returns permanent errors (e.g. HTTP 400/404) or exhausts its retry budget, the client logs telemetry into `ModelAttemptRecord` and rotates immediately to the next candidate model in the roster.
+   - Default primary model is `openrouter/free`, which dynamically routes to the lowest-latency healthy free model on OpenRouter.
+4. **Citation Extraction**:
+   - Regex parser automatically extracts all inline bracket citations (e.g. `[1]`, `[2]`) into `cited_ranks` for UI provenance linking.
+5. **Streaming & Non-Streaming**:
+   - Supports both complete response generation and real-time SSE token streaming (`generate_stream`) with model selection events.
+
+---
+
+## 11. Interactive Streamlit Studio UI
+
+### Concept
+The `UI/` folder provides an interactive, dark-mode web application built with Streamlit that connects directly to the RAG backend engine.
+
+### Key UI Features:
+- **Search & Multi-Mode Retrieval**:
+  - Strategy selector: `Hybrid RRF`, `Dense Vector (Cosine)`, `BM25 Keyword`, `Table-Aware Expansion`.
+  - Top-K slider (1–25) and minimum similarity threshold filter.
+  - Document filter multi-select (dynamically queried from PostgreSQL database).
+  - Chunk type filters (`text`, `table`, `table_summary`, `figure`) and page range filtering.
+- **Real-Time Latency & Diagnostics Bar**:
+  - Instant breakdown of: Total latency, Query embedding time, Vector search time, BM25 time, and RRF fusion latency.
+- **Ranked Result Cards**:
+  - Visual score pills: RRF score, Vector similarity score, and BM25 score.
+  - Section breadcrumb hierarchy and page provenance.
+  - Query term highlighting.
+  - Collapsible JSON metadata inspector.
+- **Structured Table Viewer & Parent Expansion**:
+  - Markdown table rendering.
+  - "Expand Parent Table" button to inspect stitched multi-page tables.
+- **Knowledge Corpus Explorer**:
+  - Ingested documents table (filename, version, chunk count, status, creation timestamp).
+  - Visual figure and diagram gallery with relevance scores and OCR snippets.
+- **Generative AI Answer Synthesis**:
+  - Live streaming answer with inline citations (`[1]`, `[2]`).
+  - Real-time model badge showing active model and auto-failover notification if a model was rotated.
+
+**How to Launch the UI:**
+```bash
+./RAG/venv/bin/python3 -m streamlit run UI/app.py --server.port 8501
+```
+Navigate to `http://localhost:8501`.
+
+---
+
 ## Module Structure
 
 ```
-src/rag/
-├── assets/               # Visual asset intelligence layer
-│   ├── analyzer.py         # Vision provider abstraction
-│   ├── caption_detector.py # Spatial caption-to-figure association
-│   ├── chunker.py          # Figure-aware chunk generation
-│   ├── classifier.py       # Cheap heuristic figure classification
-│   ├── deduplicator.py     # SHA-256 + dHash deduplication
-│   ├── extractor.py        # PDF figure/image extraction
-│   ├── ocr.py              # Figure-specific OCR
-│   ├── processor.py        # End-to-end asset processing orchestrator
-│   ├── relevance.py        # Heuristic relevance scoring & policy routing
-│   ├── storage.py          # MinIO/local figure storage
-│   └── providers/          # Vision model providers (OpenRouter, OpenAI)
-├── connectors/           # Source data connectors
-│   ├── base.py             # Abstract BaseSourceConnector
-│   ├── local_file.py       # Local filesystem connector
-│   ├── s3.py               # AWS S3 / MinIO connector
-│   ├── web.py              # HTTP/web connector
-│   └── database.py         # SQL database connector
-├── core/                 # Database models, config, exceptions
-│   ├── config.py           # Pydantic settings with YAML/env support
-│   ├── database.py         # SQLAlchemy engine & session management
-│   ├── db_models.py        # All ORM table definitions
-│   ├── migrate.py          # Schema migrations, views, backfill
-│   ├── models.py           # Pydantic schemas & enums
-│   └── exceptions.py       # Domain-specific exception hierarchy
-├── embeddings/           # Dense vector embedding service
-│   ├── providers/          # Mock & OpenAI embedding providers
-│   ├── service.py          # Batch embedding orchestrator
-│   └── validator.py        # Vector validation (NaN/Inf rejection)
-├── ingestion/            # Pipeline orchestration
-│   └── pipeline.py         # End-to-end ingestion coordinator
-├── normalization/        # Text cleaning & deduplication
-│   └── normalizer.py       # Unicode, header/footer strip, OCR fix
-├── ocr/                  # Intelligent OCR subsystem
-│   ├── analyzer.py         # Page quality scoring & classification
-│   ├── preprocessor.py     # Image preprocessing profiles
-│   ├── evaluator.py        # OCR output quality evaluation
-│   ├── language_detector.py # Language identification
-│   ├── merger.py           # Native + OCR content merger
-│   └── providers/          # Tesseract, EasyOCR, DocTR providers
-├── parsing/              # PDF parsing & table extraction
-│   ├── pdf_parser.py       # Layout-aware PDF parser
-│   ├── chunker.py          # Token-aware recursive text chunker
-│   └── table_processor.py  # Multi-page table stitching & validation
-└── storage/              # Raw document storage backends
-    ├── local.py            # Local filesystem storage
-    └── s3.py               # S3/MinIO object storage
+├── RAG/
+│   ├── configs/              # Centralized JSON configuration & schemas
+│   │   ├── config.json         # Master settings (DB, OCR, embeddings, retrieval, vision)
+│   │   └── config.schema.json  # Pydantic v2 JSON Schema for IDE validation
+│   └── src/rag/
+│       ├── assets/           # Visual asset intelligence layer
+│       │   ├── analyzer.py     # Vision provider abstraction
+│       │   ├── caption_detector.py # Spatial caption-to-figure association
+│       │   ├── chunker.py      # Figure-aware chunk generation
+│       │   ├── classifier.py   # Heuristic figure classification (logos, banners, diagrams)
+│       │   ├── deduplicator.py # SHA-256 + 64-bit dHash deduplication
+│       │   ├── extractor.py    # PDF figure and image extraction
+│       │   ├── ocr.py          # Figure-specific OCR extraction
+│       │   ├── processor.py    # End-to-end asset processing orchestrator
+│       │   ├── relevance.py    # Heuristic relevance scoring & policy routing
+│       │   ├── storage.py      # MinIO/local figure storage backend
+│       │   └── providers/      # OpenRouter and OpenAI vision providers
+│       ├── connectors/       # Source data connectors (Local, S3/MinIO, Web, SQL)
+│       ├── core/             # Database models, config, migrations, exceptions
+│       ├── embeddings/       # Dense vector embedding service (Mock, OpenAI)
+│       ├── generation/       # Grounded LLM answer generation subsystem
+│       │   ├── models.py       # Pydantic models (GenerationRequest, GenerationResponse)
+│       │   ├── openrouter_client.py # OpenRouter client with retries & model rotation
+│       │   └── service.py      # LLMGenerationService prompt formatting & citations
+│       ├── ingestion/        # Pipeline orchestration & incremental sync
+│       ├── normalization/    # Unicode NFKC, header/footer stripping, OCR repair
+│       ├── ocr/              # Intelligent OCR subsystem (Tesseract, quality scoring, merge)
+│       ├── parsing/          # PDF parsing, recursive token chunking, table processing
+│       ├── retrieval/        # Hybrid semantic and keyword retrieval engine
+│       │   ├── bm25.py         # BM25 sparse keyword retriever
+│       │   ├── filters.py      # Typed metadata filters & SQL clause builders
+│       │   ├── fusion.py       # Reciprocal Rank Fusion (RRF) algorithm
+│       │   ├── hybrid_service.py # Vector + BM25 + RRF orchestrator
+│       │   ├── models.py       # RetrievalRequest, RetrievalResponse, RetrievedChunkResult
+│       │   ├── repositories/   # pgvector and Python in-memory vector repositories
+│       │   ├── retriever.py    # Table-aware retriever & parent table expansion
+│       │   └── vector_service.py # Vector semantic retrieval orchestrator
+│       └── storage/          # Raw document payload storage (Local, MinIO/S3, DB)
+│
+└── UI/                       # Interactive Streamlit Studio
+    ├── app.py                # Main Streamlit application entrypoint
+    ├── config.py             # UI path resolution & sample query presets
+    ├── rag_engine.py         # Adapter bridging Streamlit to RAG retrieval & generation
+    ├── requirements.txt      # UI dependencies (streamlit, pandas, etc.)
+    ├── styles.css            # Custom dark-mode design system & card styling
+    └── components/           # Reusable UI presentation components
+        ├── answer_view.py    # Generative AI answer synthesis with citations & model badges
+        ├── corpus_view.py    # Ingested documents catalog & visual asset gallery
+        ├── header.py         # Branding banner & corpus KPI metrics
+        ├── results_view.py   # Latency diagnostics bar & ranked chunk cards
+        ├── sidebar.py        # Mode selector, top-k, thresholds, and filters
+        └── table_view.py     # Structured table viewer & parent expansion
 ```
 
 ---
@@ -430,13 +563,11 @@ src/rag/
 ## Configuration
 
 All settings are managed through a layered configuration system:
-1. **YAML config file** (`configs/default.yaml`)
-2. **Environment variables** (override YAML values)
+1. **JSON config file** (`configs/config.json`) with environment variable expansion (`${VAR:-default}`)
+2. **Environment variables** (override config values)
 3. **`.env` file** (loaded automatically)
 
-Key configuration blocks: `database`, `storage`, `parser`, `chunking`, `table`, `ocr`, `asset`, `embedding`, `pipeline`, `logging`.
-
-See [`docs/CONFIG.md`](docs/CONFIG.md) for full configuration reference.
+Key configuration blocks: `app`, `database`, `storage`, `parser`, `chunking`, `table`, `ocr`, `normalization`, `asset`, `embedding`, `retrieval`, `pipeline`, `logging`.
 
 ---
 

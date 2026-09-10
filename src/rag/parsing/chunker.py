@@ -11,7 +11,7 @@ import logging
 import re
 import uuid
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import tiktoken
 
@@ -64,6 +64,20 @@ class RecursiveTextChunker:
                            self.config.encoding_model, exc)
             self._enc = tiktoken.get_encoding("cl100k_base")
 
+    @staticmethod
+    def _compute_heading_level(heading: str) -> int:
+        """Infer hierarchical level (1=section, 2=subsection, 3=subsubsection) from heading text."""
+        clean = heading.strip()
+        num_match = re.match(r"^(?:section|appendix|chapter)?\s*(\d+(?:\.\d+)*)", clean, re.IGNORECASE)
+        if num_match:
+            digits = num_match.group(1).rstrip(".").split(".")
+            return min(len(digits), 4)
+        if clean.lower().startswith("subsection"):
+            return 2
+        if clean.lower().startswith("subsubsection"):
+            return 3
+        return 1
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -95,6 +109,9 @@ class RecursiveTextChunker:
             for np in normalized_doc.pages:
                 norm_pages_map[np.page_number] = np
 
+        # Document-wide hierarchical heading stack: [(level, heading_text), ...]
+        heading_stack: List[Tuple[int, str]] = []
+
         for page in parsed_doc.pages:
             norm_page = norm_pages_map.get(page.page_number)
 
@@ -107,8 +124,23 @@ class RecursiveTextChunker:
             if not text_to_chunk.strip():
                 continue
 
-            # Determine current section heading (last heading seen on this page)
-            section = page.headings[-1] if page.headings else None
+            # Update hierarchical heading stack if this page has headings
+            if page.headings:
+                for h in page.headings:
+                    clean_h = h.strip()
+                    if not clean_h:
+                        continue
+                    lvl = self._compute_heading_level(clean_h)
+                    # Pop headings at the same or deeper level
+                    while heading_stack and heading_stack[-1][0] >= lvl:
+                        heading_stack.pop()
+                    heading_stack.append((lvl, clean_h))
+
+            # Derive section, subsection, and breadcrumb path
+            section_path = [h for _, h in heading_stack]
+            primary_section = heading_stack[0][1] if heading_stack else None
+            subsection = heading_stack[1][1] if len(heading_stack) > 1 else None
+            section_breadcrumb = " > ".join(section_path) if section_path else None
 
             # Split this page's text into token-bounded segments
             page_chunks = self._split_text(text_to_chunk)
@@ -137,6 +169,10 @@ class RecursiveTextChunker:
                     "page": page.page_number,
                     "num_pages": parsed_doc.num_pages,
                     "parser_version": parsed_doc.parser_version,
+                    "section": primary_section,
+                    "subsection": subsection,
+                    "section_path": section_path,
+                    "breadcrumb": section_breadcrumb,
                     "content_source": getattr(page, "content_source", "native"),
                     "ocr_applied": getattr(page, "ocr_applied", False),
                     "ocr_confidence": getattr(page, "ocr_confidence", None),
@@ -160,7 +196,7 @@ class RecursiveTextChunker:
                         version=version,
                         chunk_index=chunk_index,
                         text=clean,
-                        section=section,
+                        section=section_breadcrumb,
                         page=page.page_number,
                         metadata=metadata,
                         chunking_version=self.config.chunking_version,

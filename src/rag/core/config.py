@@ -419,6 +419,313 @@ class AssetConfig(BaseModel):
     vision: VisionConfig = Field(default_factory=VisionConfig, description="Vision analysis settings")
 
 
+class RerankingConfig(BaseModel):
+    """Validated configuration for reranking candidates after hybrid retrieval and RRF fusion."""
+    enabled: bool = Field(
+        default_factory=lambda: os.getenv("RERANKING_ENABLED", "true").lower() in ("1", "true", "yes"),
+        description="Enable reranking stage after RRF fusion",
+    )
+    provider: str = Field(
+        default_factory=lambda: os.getenv("RERANKER_PROVIDER", "mock"),
+        description="Reranker provider: mock | cross_encoder | openrouter",
+    )
+    model: str = Field(
+        default_factory=lambda: os.getenv("RERANKER_MODEL", "mock-reranker"),
+        description="Reranker model name or checkpoint",
+    )
+    model_version: str = Field(
+        default_factory=lambda: os.getenv("RERANKER_MODEL_VERSION", "v1.0"),
+        description="Model version string for telemetry and caching",
+    )
+    top_k: int = Field(
+        default_factory=lambda: int(os.getenv("RERANKER_TOP_K", "5")),
+        ge=1,
+        le=1000,
+        description="Number of top candidates returned after reranking",
+    )
+    candidate_k: int = Field(
+        default_factory=lambda: int(os.getenv("RERANKER_CANDIDATE_K", "50")),
+        ge=1,
+        le=1000,
+        description="Number of candidate chunks fed to the reranker",
+    )
+    timeout_sec: float = Field(
+        default_factory=lambda: float(os.getenv("RERANKER_TIMEOUT_SECONDS", "10.0")),
+        ge=0.1,
+        le=120.0,
+        description="Timeout budget for reranking call in seconds",
+    )
+    batch_size: int = Field(
+        default_factory=lambda: int(os.getenv("RERANKER_BATCH_SIZE", "25")),
+        ge=1,
+        le=500,
+        description="Batch size for reranker candidate scoring",
+    )
+    max_document_length: int = Field(
+        default_factory=lambda: int(os.getenv("RERANKER_MAX_DOCUMENT_LENGTH", "1024")),
+        ge=64,
+        le=32000,
+        description="Max character length per document before truncation",
+    )
+    max_query_length: int = Field(
+        default_factory=lambda: int(os.getenv("RERANKER_MAX_QUERY_LENGTH", "512")),
+        ge=1,
+        le=4000,
+        description="Max character length for query before truncation/validation",
+    )
+    fallback_enabled: bool = Field(
+        default_factory=lambda: os.getenv("RERANKER_FALLBACK_ENABLED", "true").lower() in ("1", "true", "yes"),
+        description="Fallback to RRF results on reranking provider failure",
+    )
+    cache_enabled: bool = Field(
+        default_factory=lambda: os.getenv("RERANKER_CACHE_ENABLED", "false").lower() in ("1", "true", "yes"),
+        description="Enable in-memory LRU cache for reranking results",
+    )
+    cache_max_size: int = Field(
+        default_factory=lambda: int(os.getenv("RERANKER_CACHE_MAX_SIZE", "256")),
+        ge=1,
+        le=10000,
+        description="Max size of LRU cache",
+    )
+
+
+class RetrievalConfig(BaseModel):
+    """Configuration for vector retrieval, ranking, and metadata filtering."""
+    reranking: RerankingConfig = Field(
+        default_factory=RerankingConfig,
+        description="Reranking configuration for post-fusion scoring",
+    )
+    enabled: bool = Field(
+        default_factory=lambda: os.getenv("VECTOR_RETRIEVAL_ENABLED", "true").lower() in ("1", "true", "yes"),
+        description="Enable vector retrieval subsystem",
+    )
+    backend: str = Field(
+        default_factory=lambda: os.getenv("VECTOR_BACKEND", "auto"),
+        description="Vector retrieval backend: auto | pgvector | python",
+    )
+    default_top_k: int = Field(
+        default_factory=lambda: int(os.getenv("VECTOR_TOP_K", "5")),
+        ge=1,
+        le=100,
+        description="Default number of chunks returned",
+    )
+    max_top_k: int = Field(default=100, ge=1, le=1000, description="Hard ceiling for top_k parameter")
+    similarity_threshold: Optional[float] = Field(
+        default_factory=lambda: float(os.getenv("VECTOR_SIMILARITY_THRESHOLD")) if os.getenv("VECTOR_SIMILARITY_THRESHOLD") else None,
+        ge=-1.0,
+        le=1.0,
+        description="Minimum cosine similarity threshold to qualify result (None disables filter)",
+    )
+    candidate_limit: int = Field(
+        default=1000,
+        ge=10,
+        le=10000,
+        description="Max candidate embeddings evaluated during search",
+    )
+    distance_metric: str = Field(
+        default_factory=lambda: os.getenv("VECTOR_DISTANCE_METRIC", "cosine"),
+        description="Vector distance metric: cosine | l2 | inner_product",
+    )
+    index_type: str = Field(
+        default_factory=lambda: os.getenv("VECTOR_INDEX_TYPE", "hnsw"),
+        description="Vector index structure: hnsw | ivfflat | none",
+    )
+    allow_inactive_documents: bool = Field(
+        default=False,
+        description="Whether retrieval includes soft-deleted or non-indexed documents",
+    )
+    allow_python_fallback: bool = Field(
+        default=True,
+        description="Allow Python in-memory vector similarity when native pgvector is unavailable",
+    )
+    strict_embedding_validation: bool = Field(
+        default=True,
+        description="Strictly validate query and stored embedding dimensions and finiteness",
+    )
+    query_timeout_sec: float = Field(
+        default_factory=lambda: float(os.getenv("VECTOR_SEARCH_TIMEOUT_SECONDS", "10.0")),
+        ge=0.5,
+        le=120.0,
+        description="Timeout for query execution in seconds",
+    )
+    max_query_length: int = Field(
+        default_factory=lambda: int(os.getenv("VECTOR_MAX_QUERY_LENGTH", "4000")),
+        ge=1,
+        le=32000,
+        description="Maximum allowed character length for natural language search queries",
+    )
+    embedding_model: Optional[str] = Field(
+        default_factory=lambda: os.getenv("VECTOR_EMBEDDING_MODEL"),
+        description="Override target embedding model for retrieval",
+    )
+    embedding_dimensions: Optional[int] = Field(
+        default_factory=lambda: int(os.getenv("VECTOR_EMBEDDING_DIMENSIONS", "1536")) if os.getenv("VECTOR_EMBEDDING_DIMENSIONS") else 1536,
+        ge=1,
+        description="Expected vector dimensionality",
+    )
+    max_metadata_filter_size: int = Field(
+        default=25,
+        ge=1,
+        le=100,
+        description="Maximum number of criteria allowed in metadata filter",
+    )
+    hybrid_enabled: bool = Field(default=True, description="Enable hybrid search combining vector + BM25")
+    rrf_enabled: bool = Field(
+        default_factory=lambda: os.getenv("RRF_ENABLED", "true").lower() in ("1", "true", "yes"),
+        description="Master switch for Reciprocal Rank Fusion (disable to bypass fusion and return dense results only)",
+    )
+    rrf_k: int = Field(default=60, ge=1, le=1000, description="Reciprocal Rank Fusion smoothing constant k")
+    rrf_dense_weight: float = Field(
+        default_factory=lambda: float(os.getenv("RRF_DENSE_WEIGHT", "1.0")),
+        ge=0.0,
+        le=100.0,
+        description="RRF weight multiplier for dense vector retrieval source",
+    )
+    rrf_sparse_weight: float = Field(
+        default_factory=lambda: float(os.getenv("RRF_SPARSE_WEIGHT", "1.0")),
+        ge=0.0,
+        le=100.0,
+        description="RRF weight multiplier for sparse BM25 retrieval source",
+    )
+    rrf_top_k: int = Field(
+        default_factory=lambda: int(os.getenv("RRF_TOP_K", "50")),
+        ge=1,
+        le=1000,
+        description="Maximum number of fused candidates retained after RRF fusion before final_top_k trim",
+    )
+    rrf_source_weights: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Extensible per-source weight map for future retriever sources (e.g. table_retriever: 0.8)",
+    )
+    bm25_k1: float = Field(default=1.5, ge=0.0, le=10.0, description="BM25 term frequency saturation parameter")
+    bm25_b: float = Field(default=0.75, ge=0.0, le=1.0, description="BM25 document length normalization parameter")
+    dense_top_k: int = Field(
+        default_factory=lambda: int(os.getenv("DENSE_TOP_K", "50")),
+        ge=1,
+        le=1000,
+        description="Number of candidate chunks retrieved from dense vector search before fusion",
+    )
+    sparse_top_k: int = Field(
+        default_factory=lambda: int(os.getenv("SPARSE_TOP_K", "50")),
+        ge=1,
+        le=1000,
+        description="Number of candidate chunks retrieved from sparse BM25 search before fusion",
+    )
+    hybrid_candidate_k: int = Field(
+        default_factory=lambda: int(os.getenv("HYBRID_CANDIDATE_K", "50")),
+        ge=1,
+        le=1000,
+        description="Ceiling for candidate pool evaluated during hybrid fusion",
+    )
+    final_top_k: int = Field(
+        default_factory=lambda: int(os.getenv("FINAL_TOP_K", "5")),
+        ge=1,
+        le=1000,
+        description="Default final number of chunks returned after fusion",
+    )
+    hybrid_dense_timeout_sec: float = Field(
+        default_factory=lambda: float(os.getenv("HYBRID_DENSE_TIMEOUT_SEC", "10.0")),
+        ge=0.1,
+        le=120.0,
+        description="Timeout budget for dense vector retrieval branch in hybrid search",
+    )
+    hybrid_sparse_timeout_sec: float = Field(
+        default_factory=lambda: float(os.getenv("HYBRID_SPARSE_TIMEOUT_SEC", "10.0")),
+        ge=0.1,
+        le=120.0,
+        description="Timeout budget for sparse BM25 retrieval branch in hybrid search",
+    )
+    allow_partial_failure: bool = Field(
+        default_factory=lambda: os.getenv("HYBRID_ALLOW_PARTIAL_FAILURE", "true").lower() in ("1", "true", "yes"),
+        description="Allow returning results from single retriever if the other branch fails",
+    )
+    bm25: "BM25Config" = Field(default_factory=lambda: BM25Config(), description="BM25 sparse keyword retrieval configuration")
+
+    def get_rrf_weights(self) -> Dict[str, float]:
+        """Build the merged per-source weight map for RRF fusion.
+
+        Priority: explicit rrf_source_weights > rrf_dense_weight/rrf_sparse_weight > default 1.0
+        """
+        weights: Dict[str, float] = {
+            "vector": self.rrf_dense_weight,
+            "bm25": self.rrf_sparse_weight,
+        }
+        weights.update(self.rrf_source_weights)
+        return weights
+
+    @model_validator(mode="after")
+    def _validate_rrf_weights(self) -> "RetrievalConfig":
+        all_weights = self.get_rrf_weights()
+        for name, w in all_weights.items():
+            if w < 0:
+                raise ValueError(f"RRF weight for source '{name}' must be >= 0, got {w}")
+        if all(w == 0.0 for w in all_weights.values()):
+            raise ValueError("At least one RRF source weight must be > 0")
+        return self
+
+
+class BM25Config(BaseModel):
+    """Validated configuration for BM25 sparse keyword retrieval."""
+    enabled: bool = Field(
+        default_factory=lambda: os.getenv("BM25_ENABLED", "true").lower() in ("1", "true", "yes"),
+        description="Enable BM25 sparse keyword retrieval subsystem",
+    )
+    top_k: int = Field(
+        default_factory=lambda: int(os.getenv("BM25_TOP_K", "5")),
+        ge=1,
+        le=1000,
+        description="Default number of chunks returned by BM25 retrieval",
+    )
+    k1: float = Field(
+        default_factory=lambda: float(os.getenv("BM25_K1", "1.5")),
+        ge=0.0,
+        le=10.0,
+        description="BM25 term frequency saturation parameter k1",
+    )
+    b: float = Field(
+        default_factory=lambda: float(os.getenv("BM25_B", "0.75")),
+        ge=0.0,
+        le=1.0,
+        description="BM25 document length normalization parameter b",
+    )
+    min_score: float = Field(
+        default_factory=lambda: float(os.getenv("BM25_MIN_SCORE", "0.0")),
+        ge=0.0,
+        description="Minimum score cutoff for BM25 candidates",
+    )
+    index_refresh_interval: int = Field(
+        default_factory=lambda: int(os.getenv("BM25_INDEX_REFRESH_INTERVAL", "300")),
+        ge=0,
+        description="Automatic in-memory index refresh interval in seconds (0 to disable)",
+    )
+    title_weight: float = Field(
+        default_factory=lambda: float(os.getenv("BM25_TITLE_WEIGHT", "2.5")),
+        ge=0.0,
+        description="Field weight multiplier for document/chunk titles",
+    )
+    heading_weight: float = Field(
+        default_factory=lambda: float(os.getenv("BM25_HEADING_WEIGHT", "2.0")),
+        ge=0.0,
+        description="Field weight multiplier for section headings",
+    )
+    body_weight: float = Field(
+        default_factory=lambda: float(os.getenv("BM25_BODY_WEIGHT", "1.0")),
+        ge=0.0,
+        description="Field weight multiplier for main chunk body text",
+    )
+    table_weight: float = Field(
+        default_factory=lambda: float(os.getenv("BM25_TABLE_WEIGHT", "1.5")),
+        ge=0.0,
+        description="Field weight multiplier for structured table chunks",
+    )
+    caption_weight: float = Field(
+        default_factory=lambda: float(os.getenv("BM25_CAPTION_WEIGHT", "1.2")),
+        ge=0.0,
+        description="Field weight multiplier for figure and diagram captions",
+    )
+
+
+
 class LoggingConfig(BaseModel):
     """Logging format and level."""
     level: str = Field(default="INFO", description="Logging level: DEBUG | INFO | WARNING | ERROR | CRITICAL")
@@ -443,6 +750,7 @@ class Settings(BaseModel):
     normalization: NormalizationConfig = Field(default_factory=NormalizationConfig)
     asset: AssetConfig = Field(default_factory=AssetConfig)
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
@@ -451,6 +759,10 @@ class Settings(BaseModel):
     @property
     def database_url(self) -> str:
         return self.database.url
+
+    @property
+    def bm25(self) -> BM25Config:
+        return self.retrieval.bm25
 
     @property
     def raw_storage_dir(self) -> str:

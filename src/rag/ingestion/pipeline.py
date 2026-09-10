@@ -739,7 +739,9 @@ class IngestionPipeline:
 
                         for fig in parsed.figures:
                             p_num = fig.page_number
-                            sec_heading = page_headings_map.get(p_num, [""])[0] if page_headings_map.get(p_num) else None
+                            p_headings = page_headings_map.get(p_num, [])
+                            sec_heading = p_headings[0] if p_headings else None
+                            subsec_heading = p_headings[1] if len(p_headings) > 1 else None
                             nearby_ctx = page_nearby_text_map.get(p_num, "")
 
                             cand = ExtractedVisualCandidate(
@@ -760,6 +762,7 @@ class IngestionPipeline:
                             context_info = AssetContextInfo(
                                 document_title=doc_title,
                                 section_heading=sec_heading,
+                                subsection_heading=subsec_heading,
                                 nearby_text=nearby_ctx,
                             )
 

@@ -110,7 +110,7 @@
     "vision": {
       "enabled": true,
       "provider": "openrouter/free",
-      "model": "google/gemini-2.0-flash-lite-preview-02-05:free",
+      "model": "openrouter/free",
       "api_key": "${OPENROUTER_API_KEY:-}",
       "endpoint_url": "https://openrouter.ai/api/v1/chat/completions",
       "timeout_sec": 45.0,
@@ -134,6 +134,24 @@
     "oversized_chunk_strategy": "truncate",
     "api_key": "${OPENAI_API_KEY:-}",
     "endpoint_url": null
+  },
+  "retrieval": {
+    "enabled": true,
+    "backend": "auto",
+    "default_top_k": 5,
+    "max_top_k": 100,
+    "similarity_threshold": null,
+    "candidate_limit": 1000,
+    "distance_metric": "cosine",
+    "allow_inactive_documents": false,
+    "allow_python_fallback": true,
+    "strict_embedding_validation": true,
+    "query_timeout_sec": 10.0,
+    "max_metadata_filter_size": 25,
+    "hybrid_enabled": true,
+    "rrf_k": 60,
+    "bm25_k1": 1.5,
+    "bm25_b": 0.75
   },
   "pipeline": {
     "default_tenant_id": "default",

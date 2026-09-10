@@ -21,6 +21,10 @@ def _prepare_schemas(engine) -> None:
     if dialect == "postgresql":
         with engine.connect() as conn:
             conn.execute(text("CREATE SCHEMA IF NOT EXISTS raw;"))
+
+            # Ensure pgvector extension is active
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+
             # Column migrations for existing tables
             conn.execute(text("""
                 DO $$
@@ -48,8 +52,44 @@ def _prepare_schemas(engine) -> None:
                     END IF;
                 END $$;
             """))
+
+            # pgvector: Add native vector column and HNSW index
+            conn.execute(text("""
+                DO $$
+                BEGIN
+                    -- Add embedding_vector column (native pgvector type)
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'public' AND table_name = 'embeddings'
+                    ) AND NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_schema = 'public' AND table_name = 'embeddings'
+                          AND column_name = 'embedding_vector'
+                    ) THEN
+                        ALTER TABLE public.embeddings ADD COLUMN embedding_vector vector(1536);
+                    END IF;
+                END $$;
+            """))
+
+            # Backfill: populate embedding_vector from JSON vector column for existing rows
+            conn.execute(text("""
+                UPDATE public.embeddings
+                SET embedding_vector = (vector::text)::vector
+                WHERE embedding_vector IS NULL
+                  AND vector IS NOT NULL
+                  AND json_array_length(vector) > 0;
+            """))
+
+            # Create HNSW cosine index (idempotent via IF NOT EXISTS)
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS ix_embeddings_hnsw_cosine
+                ON public.embeddings
+                USING hnsw (embedding_vector vector_cosine_ops)
+                WITH (m = 16, ef_construction = 200);
+            """))
+
             conn.commit()
-        logger.info("Ensured PostgreSQL schema 'raw' and column migrations exist.")
+        logger.info("Ensured PostgreSQL schema 'raw', column migrations, pgvector backfill, and HNSW index exist.")
 
     elif dialect == "sqlite":
         # Ensure raw database is attached on existing raw connection
