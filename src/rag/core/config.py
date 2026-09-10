@@ -930,6 +930,41 @@ class QueryRewriteConfig(BaseModel):
     )
 
 
+class QueryRoutingConfig(BaseModel):
+    """Configuration for query routing layer."""
+    enabled: bool = Field(
+        default_factory=lambda: os.getenv("QUERY_ROUTING_ENABLED", "true").lower() in ("1", "true", "yes"),
+        description="Enable query routing layer",
+    )
+    router_type: str = Field(
+        default_factory=lambda: os.getenv("QUERY_ROUTER_TYPE", "rule_based"),
+        description="Router implementation: rule_based | llm | hybrid",
+    )
+    confidence_threshold: float = Field(
+        default_factory=lambda: float(os.getenv("QUERY_ROUTER_CONFIDENCE_THRESHOLD", "0.6")),
+        ge=0.0,
+        le=1.0,
+        description="Confidence threshold below which default route is used",
+    )
+    default_route: str = Field(
+        default_factory=lambda: os.getenv("QUERY_ROUTER_DEFAULT_ROUTE", "hybrid_rrf"),
+        description="Default fallback route when classification is uncertain",
+    )
+    max_cost: float = Field(
+        default_factory=lambda: float(os.getenv("QUERY_ROUTER_MAX_COST", "0.01")),
+        ge=0.0,
+        description="Maximum cost in USD allowed for LLM-based routing",
+    )
+    llm_provider: str = Field(
+        default_factory=lambda: os.getenv("QUERY_ROUTER_PROVIDER", "mock"),
+        description="LLM provider for LLM router: mock | openrouter",
+    )
+    llm_model: str = Field(
+        default_factory=lambda: os.getenv("QUERY_ROUTER_MODEL", "google/gemini-2.5-flash"),
+        description="Model identifier for LLM router",
+    )
+
+
 class LoggingConfig(BaseModel):
     """Logging format and level."""
     level: str = Field(default="INFO", description="Logging level: DEBUG | INFO | WARNING | ERROR | CRITICAL")
@@ -958,6 +993,7 @@ class Settings(BaseModel):
     context: ContextBuilderConfig = Field(default_factory=ContextBuilderConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
     query_rewrite: QueryRewriteConfig = Field(default_factory=QueryRewriteConfig)
+    routing: QueryRoutingConfig = Field(default_factory=QueryRoutingConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 

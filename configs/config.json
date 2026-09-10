@@ -175,6 +175,15 @@
     "enable_decomposition": true,
     "enable_conversation": true
   },
+  "routing": {
+    "enabled": true,
+    "router_type": "rule_based",
+    "confidence_threshold": 0.6,
+    "default_route": "hybrid_rrf",
+    "max_cost": 0.01,
+    "llm_provider": "mock",
+    "llm_model": "google/gemini-2.5-flash"
+  },
   "logging": {
     "level": "INFO",
     "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

@@ -1,0 +1,230 @@
+{
+  "description": "Golden evaluation dataset for RAG query routing layer",
+  "version": "1.0.0",
+  "cases": [
+    {
+      "id": "ident_01",
+      "query": "Lookup patent US9876543A in database",
+      "expected_type": "exact_identifier",
+      "expected_route": "bm25_first",
+      "description": "US Patent identifier query"
+    },
+    {
+      "id": "ident_02",
+      "query": "Find document with UUID 550e8400-e29b-41d4-a716-446655440000",
+      "expected_type": "exact_identifier",
+      "expected_route": "bm25_first",
+      "description": "Standard UUID lookup query"
+    },
+    {
+      "id": "ident_03",
+      "query": "What is the fix for error ERR-404 in production?",
+      "expected_type": "exact_identifier",
+      "expected_route": "bm25_first",
+      "description": "Error code identifier lookup"
+    },
+    {
+      "id": "ident_04",
+      "query": "Status of ticket PROJ-9921",
+      "expected_type": "exact_identifier",
+      "expected_route": "bm25_first",
+      "description": "Project ticket code identifier"
+    },
+    {
+      "id": "ident_05",
+      "query": "Show changelog for release v2.4.1",
+      "expected_type": "exact_identifier",
+      "expected_route": "bm25_first",
+      "description": "Semantic version string lookup"
+    },
+    {
+      "id": "table_01",
+      "query": "What are the total revenues in the Q3 financial table?",
+      "expected_type": "table",
+      "expected_route": "table_aware",
+      "description": "Financial table query"
+    },
+    {
+      "id": "table_02",
+      "query": "Which column in table 4 lists the operating expenses?",
+      "expected_type": "table",
+      "expected_route": "table_aware",
+      "description": "Table column structure query"
+    },
+    {
+      "id": "table_03",
+      "query": "Compare the row values for North America versus Europe in the balance sheet",
+      "expected_type": "table",
+      "expected_route": "table_aware",
+      "description": "Balance sheet tabular row comparison"
+    },
+    {
+      "id": "table_04",
+      "query": "Show the metric percentage in row 12 of the data sheet",
+      "expected_type": "table",
+      "expected_route": "table_aware",
+      "description": "Data sheet row and cell query"
+    },
+    {
+      "id": "fig_01",
+      "query": "Explain what the system architecture diagram shows",
+      "expected_type": "figure",
+      "expected_route": "multimodal",
+      "description": "Architecture diagram query"
+    },
+    {
+      "id": "fig_02",
+      "query": "What is the trend depicted in figure 3 bar chart?",
+      "expected_type": "figure",
+      "expected_route": "multimodal",
+      "description": "Bar chart figure query"
+    },
+    {
+      "id": "fig_03",
+      "query": "Describe the steps shown in the onboarding flowchart",
+      "expected_type": "figure",
+      "expected_route": "multimodal",
+      "description": "Flowchart diagram query"
+    },
+    {
+      "id": "fig_04",
+      "query": "What does the schematic illustrate about circuit flow?",
+      "expected_type": "figure",
+      "expected_route": "multimodal",
+      "description": "Schematic visual query"
+    },
+    {
+      "id": "meta_01",
+      "query": "Who is the author of this specification document?",
+      "expected_type": "metadata",
+      "expected_route": "metadata_lookup",
+      "description": "Document author query"
+    },
+    {
+      "id": "meta_02",
+      "query": "When was this paper published?",
+      "expected_type": "metadata",
+      "expected_route": "metadata_lookup",
+      "description": "Publication date query"
+    },
+    {
+      "id": "meta_03",
+      "query": "What is the page count and file size of the uploaded PDF?",
+      "expected_type": "metadata",
+      "expected_route": "metadata_lookup",
+      "description": "Page count and size query"
+    },
+    {
+      "id": "meta_04",
+      "query": "Who wrote the safety compliance policy?",
+      "expected_type": "metadata",
+      "expected_route": "metadata_lookup",
+      "description": "Author inquiry query"
+    },
+    {
+      "id": "sum_01",
+      "query": "Please summarize the entire audit report",
+      "expected_type": "summarization",
+      "expected_route": "summarization",
+      "description": "Summarize entire document query"
+    },
+    {
+      "id": "sum_02",
+      "query": "Provide an executive summary of the quarterly earnings",
+      "expected_type": "summarization",
+      "expected_route": "summarization",
+      "description": "Executive summary query"
+    },
+    {
+      "id": "sum_03",
+      "query": "Give me a brief overview of the key takeaways from this proposal",
+      "expected_type": "summarization",
+      "expected_route": "summarization",
+      "description": "Key takeaways overview query"
+    },
+    {
+      "id": "doc_01",
+      "query": "In document annual_report_2024.pdf, what was the gross margin?",
+      "expected_type": "document_specific",
+      "expected_route": "document_filtered",
+      "description": "Document filename scoped query"
+    },
+    {
+      "id": "doc_02",
+      "query": "According to security_guidelines.pdf, what are the password rules?",
+      "expected_type": "document_specific",
+      "expected_route": "document_filtered",
+      "description": "According to specific file query"
+    },
+    {
+      "id": "doc_03",
+      "query": "In file employee_handbook.docx, what is the leave policy?",
+      "expected_type": "document_specific",
+      "expected_route": "document_filtered",
+      "description": "Explicit file scoped query"
+    },
+    {
+      "id": "hop_01",
+      "query": "How does inflation affect interest rates which then affects corporate borrowing?",
+      "expected_type": "multi_hop",
+      "expected_route": "agentic_workflow",
+      "description": "Causal multi-hop reasoning query"
+    },
+    {
+      "id": "hop_02",
+      "query": "Trace the connection between supply chain disruptions and microchip shortages across both automotive and electronics sectors",
+      "expected_type": "multi_hop",
+      "expected_route": "agentic_workflow",
+      "description": "Cross-reference multi-hop query"
+    },
+    {
+      "id": "hop_03",
+      "query": "First determine the tax rate for 2023 and then calculate the deductible expense",
+      "expected_type": "multi_hop",
+      "expected_route": "agentic_workflow",
+      "description": "Multi-step chained procedural query"
+    },
+    {
+      "id": "unans_01",
+      "query": "Predict what will happen in the stock market in 2050",
+      "expected_type": "unanswerable",
+      "expected_route": "direct_abstain",
+      "description": "Unsupported future prediction"
+    },
+    {
+      "id": "unans_02",
+      "query": "asdfghjk qwertyuiop zxcvbnm",
+      "expected_type": "unanswerable",
+      "expected_route": "direct_abstain",
+      "description": "Gibberish keyboard mash"
+    },
+    {
+      "id": "unans_03",
+      "query": "What is your favorite color and how do you feel today?",
+      "expected_type": "unanswerable",
+      "expected_route": "direct_abstain",
+      "description": "Personal feeling / opinion inquiry"
+    },
+    {
+      "id": "sem_01",
+      "query": "How does the Raft consensus algorithm handle leader election?",
+      "expected_type": "general_semantic",
+      "expected_route": "hybrid_rrf",
+      "description": "Standard conceptual semantic question"
+    },
+    {
+      "id": "sem_02",
+      "query": "What are the core differences between microservices and monoliths?",
+      "expected_type": "general_semantic",
+      "expected_route": "hybrid_rrf",
+      "description": "General architectural comparison query"
+    },
+    {
+      "id": "ambig_01",
+      "query": "apple",
+      "expected_type": "general_semantic",
+      "expected_route": "hybrid_rrf",
+      "description": "Ambiguous 1-word query that triggers low-confidence default route fallback"
+    }
+  ]
+}
