@@ -795,6 +795,71 @@ class ContextBuilderConfig(BaseModel):
     )
 
 
+class GenerationConfig(BaseModel):
+    """Configuration for LLM answer synthesis, provider failover, pricing, and streaming."""
+    enabled: bool = Field(
+        default_factory=lambda: os.getenv("GENERATION_ENABLED", "true").lower() in ("1", "true", "yes"),
+        description="Enable LLM answer generation subsystem",
+    )
+    provider: str = Field(
+        default_factory=lambda: os.getenv("GENERATION_PROVIDER", "openrouter"),
+        description="LLM provider: openrouter | mock | openai",
+    )
+    model: str = Field(
+        default_factory=lambda: os.getenv("GENERATION_MODEL", "google/gemini-2.5-flash"),
+        description="Primary model identifier",
+    )
+    fallback_model: str = Field(
+        default_factory=lambda: os.getenv("GENERATION_FALLBACK_MODEL", "anthropic/claude-3.5-sonnet"),
+        description="Fallback model identifier when primary model fails",
+    )
+    fallback_models: List[str] = Field(
+        default_factory=lambda: [
+            "google/gemini-2.5-flash",
+            "anthropic/claude-3.5-sonnet",
+            "openai/gpt-4o",
+            "meta-llama/llama-3.3-70b-instruct",
+        ],
+        description="Ordered candidate roster of fallback models",
+    )
+    temperature: float = Field(
+        default_factory=lambda: float(os.getenv("GENERATION_TEMPERATURE", "0.2")),
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature for deterministic grounded answers",
+    )
+    max_tokens: int = Field(
+        default_factory=lambda: int(os.getenv("GENERATION_MAX_TOKENS", "2000")),
+        ge=64,
+        le=16384,
+        description="Maximum generation token budget for response",
+    )
+    timeout_sec: float = Field(
+        default_factory=lambda: float(os.getenv("GENERATION_TIMEOUT_SECONDS", "30.0")),
+        ge=1.0,
+        le=300.0,
+        description="Timeout threshold for generation request",
+    )
+    max_retries: int = Field(
+        default_factory=lambda: int(os.getenv("GENERATION_MAX_RETRIES", "3")),
+        ge=0,
+        le=10,
+        description="Maximum transient retries per model before failover",
+    )
+    streaming_enabled: bool = Field(
+        default_factory=lambda: os.getenv("GENERATION_STREAMING_ENABLED", "true").lower() in ("1", "true", "yes"),
+        description="Allow streaming generation tokens",
+    )
+    prompt_version: str = Field(
+        default="v1.0_grounded_citations",
+        description="Versioned prompt template to use",
+    )
+    validate_citations: bool = Field(
+        default=True,
+        description="Validate citations against ContextPackage and flag hallucinations",
+    )
+
+
 class LoggingConfig(BaseModel):
     """Logging format and level."""
     level: str = Field(default="INFO", description="Logging level: DEBUG | INFO | WARNING | ERROR | CRITICAL")
@@ -821,6 +886,7 @@ class Settings(BaseModel):
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
     context: ContextBuilderConfig = Field(default_factory=ContextBuilderConfig)
+    generation: GenerationConfig = Field(default_factory=GenerationConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 

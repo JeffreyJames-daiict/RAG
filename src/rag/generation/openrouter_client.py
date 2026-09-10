@@ -10,9 +10,13 @@ import time
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
 import requests
+from rag.generation.cost import CostTracker
 from rag.generation.models import (
+    ChatMessage,
     GenerationRequest,
     GenerationResponse,
+    LLMResponse,
+    LLMStreamChunk,
     ModelAttemptRecord,
 )
 
@@ -61,6 +65,10 @@ class OpenRouterGenerator:
         self.max_retries = max_retries_per_model
         self.timeout_sec = timeout_sec
         self.endpoint_url = endpoint_url
+
+    @property
+    def provider_name(self) -> str:
+        return "openrouter"
 
     def _get_ordered_models(self, primary_model: Optional[str] = None) -> List[str]:
         """Return candidate models ordered with preferred primary model first."""
@@ -367,3 +375,96 @@ class OpenRouterGenerator:
             "type": "error",
             "message": "❌ All candidate models failed to connect or were rate limited.",
         }
+
+    # ── LLMProvider Protocol Conformance ─────────────────────────────────
+
+    def generate_sync(
+        self,
+        messages: Sequence[ChatMessage],
+        *,
+        model: str,
+        temperature: float = 0.2,
+        max_tokens: int = 2000,
+        timeout_sec: float = 30.0,
+    ) -> LLMResponse:
+        """Execute single-model synchronous generation conforming to LLMProvider."""
+        start_time = time.perf_counter()
+        if not self.api_key:
+            return LLMResponse(
+                text="⚠️ OpenRouter API Key missing. Please configure OPENROUTER_API_KEY.",
+                model=model,
+                provider=self.provider_name,
+                latency_ms=0.0,
+            )
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/inx/enterprise-rag",
+            "X-Title": "Enterprise RAG Pipeline",
+        }
+        msg_payload = [{"role": m.role, "content": m.content} for m in messages]
+        payload = {
+            "model": model,
+            "messages": msg_payload,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+
+        resp = requests.post(
+            self.endpoint_url,
+            headers=headers,
+            json=payload,
+            timeout=timeout_sec,
+        )
+        latency_ms = (time.perf_counter() - start_time) * 1000.0
+
+        if resp.status_code != 200:
+            raise RuntimeError(f"OpenRouter error HTTP {resp.status_code}: {resp.text[:200]}")
+
+        data = resp.json()
+        answer = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        usage = data.get("usage", {})
+        in_tok = usage.get("prompt_tokens", 0)
+        out_tok = usage.get("completion_tokens", 0)
+        tot_tok = usage.get("total_tokens", in_tok + out_tok)
+        cost = CostTracker.calculate_cost(model, in_tok, out_tok)
+
+        return LLMResponse(
+            text=answer,
+            model=model,
+            provider=self.provider_name,
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+            total_tokens=tot_tok,
+            cost_usd=cost,
+            latency_ms=round(latency_ms, 2),
+            finish_reason=data.get("choices", [{}])[0].get("finish_reason"),
+            raw=data,
+        )
+
+    async def generate(
+        self,
+        messages: Sequence[ChatMessage],
+        *,
+        model: str,
+        temperature: float = 0.2,
+        max_tokens: int = 2000,
+        timeout_sec: float = 30.0,
+    ) -> LLMResponse:
+        """Asynchronous execution conforming to LLMProvider."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: self.generate_sync(
+                messages,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                timeout_sec=timeout_sec,
+            ),
+        )
+
+
+OpenRouterProvider = OpenRouterGenerator
