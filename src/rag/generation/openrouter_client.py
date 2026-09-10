@@ -87,21 +87,24 @@ class OpenRouterGenerator:
         )
         system_prompt = request.system_prompt or default_sys
 
-        # Format context chunks with provenance
-        context_blocks = []
-        for ch in request.context_chunks:
-            meta_parts = [f"[{ch.rank}]"]
-            if ch.filename:
-                meta_parts.append(f"Source: {ch.filename}")
-            if ch.page:
-                meta_parts.append(f"Page {ch.page}")
-            if ch.section:
-                meta_parts.append(f"Section: {ch.section}")
-            header = " • ".join(meta_parts)
-            context_blocks.append(f"{header}\n{ch.text.strip()}")
+        if request.context_package and getattr(request.context_package, "formatted_context", None):
+            user_content = f"User Question: {request.query}\n\n{request.context_package.formatted_context}"
+        else:
+            # Format context chunks with provenance
+            context_blocks = []
+            for ch in request.context_chunks:
+                meta_parts = [f"[{ch.rank}]"]
+                if ch.filename:
+                    meta_parts.append(f"Source: {ch.filename}")
+                if ch.page:
+                    meta_parts.append(f"Page {ch.page}")
+                if ch.section:
+                    meta_parts.append(f"Section: {ch.section}")
+                header = " • ".join(meta_parts)
+                context_blocks.append(f"{header}\n{ch.text.strip()}")
 
-        context_str = "\n\n---\n\n".join(context_blocks)
-        user_content = f"User Question: {request.query}\n\nRetrieved Passages:\n{context_str}"
+            context_str = "\n\n---\n\n".join(context_blocks)
+            user_content = f"User Question: {request.query}\n\nRetrieved Passages:\n{context_str}"
 
         return [
             {"role": "system", "content": system_prompt},
@@ -109,8 +112,9 @@ class OpenRouterGenerator:
         ]
 
     def _extract_citations(self, text: str) -> List[int]:
-        """Extract all cited numbers like [1], [2], [1, 2] from the generated text."""
+        """Extract all cited numbers like [1], [2], [C1], [C2] from the generated text."""
         citations = set()
+        # Standard numeric citations: [1], [2]
         matches = re.findall(r"\[(\d+(?:,\s*\d+)*)\]", text)
         for m in matches:
             for num in m.split(","):
@@ -118,6 +122,18 @@ class OpenRouterGenerator:
                     citations.add(int(num.strip()))
                 except ValueError:
                     pass
+
+        # Context builder citations: [C1], [C2], [C1, C2]
+        c_matches = re.findall(r"\[C(\d+(?:,\s*C?\d+)*)\]", text, re.IGNORECASE)
+        for m in c_matches:
+            for num in re.split(r"[,\s]+", m):
+                cleaned = re.sub(r"[^0-9]", "", num)
+                if cleaned:
+                    try:
+                        citations.add(int(cleaned))
+                    except ValueError:
+                        pass
+
         return sorted(citations)
 
     def generate(self, request: GenerationRequest) -> GenerationResponse:
@@ -191,6 +207,8 @@ class OpenRouterGenerator:
                             fallback_occurred=(model_idx > 0),
                             attempted_models=attempts,
                             cited_ranks=cited,
+                            citations=getattr(request.context_package, "citations", []) if request.context_package else [],
+                            context_package=request.context_package,
                             latency_ms=round(total_ms, 1),
                             total_tokens=data.get("usage", {}).get("total_tokens"),
                             raw_response=data,

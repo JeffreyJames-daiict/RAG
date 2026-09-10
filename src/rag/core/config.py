@@ -726,6 +726,75 @@ class BM25Config(BaseModel):
 
 
 
+class ContextBuilderConfig(BaseModel):
+    """Configuration for LLM context assembly, budgeting, expansion, and isolation."""
+    enabled: bool = Field(
+        default_factory=lambda: os.getenv("CONTEXT_BUILDER_ENABLED", "true").lower() in ("1", "true", "yes"),
+        description="Enable structured context builder subsystem",
+    )
+    token_budget: int = Field(
+        default_factory=lambda: int(os.getenv("CONTEXT_TOKEN_BUDGET", "4000")),
+        ge=128,
+        le=128000,
+        description="Maximum total token ceiling for assembled context",
+    )
+    max_tokens_per_document: int = Field(
+        default_factory=lambda: int(os.getenv("CONTEXT_MAX_TOKENS_PER_DOC", "2000")),
+        ge=64,
+        le=64000,
+        description="Maximum tokens allowed from a single document",
+    )
+    max_tokens_per_section: int = Field(
+        default_factory=lambda: int(os.getenv("CONTEXT_MAX_TOKENS_PER_SECTION", "1000")),
+        ge=32,
+        le=32000,
+        description="Maximum tokens allowed from a single section",
+    )
+    min_content_preservation_tokens: int = Field(
+        default=150,
+        ge=16,
+        description="Minimum token threshold to preserve for top-ranked chunk",
+    )
+    overlap_threshold: float = Field(
+        default=0.85,
+        ge=0.1,
+        le=1.0,
+        description="Jaccard token overlap threshold to treat chunks as duplicates",
+    )
+    expand_neighbors: bool = Field(
+        default_factory=lambda: os.getenv("CONTEXT_EXPAND_NEIGHBORS", "true").lower() in ("1", "true", "yes"),
+        description="Expand seed chunks with adjacent (previous/next) chunks",
+    )
+    expand_parents: bool = Field(
+        default_factory=lambda: os.getenv("CONTEXT_EXPAND_PARENTS", "true").lower() in ("1", "true", "yes"),
+        description="Expand seed chunks with parent chunk content if available",
+    )
+    max_expansion_count: int = Field(
+        default=2,
+        ge=0,
+        le=10,
+        description="Maximum additional chunks to expand per retrieved seed chunk",
+    )
+    max_chunks_per_document: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Ceiling for total chunks included per document",
+    )
+    tokenizer_encoding: str = Field(
+        default_factory=lambda: os.getenv("CONTEXT_TOKENIZER_ENCODING", "cl100k_base"),
+        description="Tiktoken encoding name (e.g. cl100k_base, o200k_base)",
+    )
+    injection_defense_enabled: bool = Field(
+        default=True,
+        description="Sanitize prompt injection attempts and enforce XML boundary fences",
+    )
+    citation_prefix: str = Field(
+        default="C",
+        description="Prefix for citation tags, e.g. 'C' generates [C1], [C2]",
+    )
+
+
 class LoggingConfig(BaseModel):
     """Logging format and level."""
     level: str = Field(default="INFO", description="Logging level: DEBUG | INFO | WARNING | ERROR | CRITICAL")
@@ -751,6 +820,7 @@ class Settings(BaseModel):
     asset: AssetConfig = Field(default_factory=AssetConfig)
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
+    context: ContextBuilderConfig = Field(default_factory=ContextBuilderConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 

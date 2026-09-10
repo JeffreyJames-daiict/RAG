@@ -82,6 +82,7 @@ class RetrievedChunkResult(BaseModel):
     # Backwards-compatible fields
     document_version: int = 1
     heading: Optional[str] = None
+    section: Optional[str] = None
     page: Optional[int] = None
     filename: str = ""
     mime_type: str = ""
@@ -111,6 +112,10 @@ class RetrievedChunkResult(BaseModel):
         # Keep aliases synchronized
         if not self.document_version_id and self.document_version:
             self.document_version_id = f"v{self.document_version}"
+        if self.section is not None and self.heading is None:
+            self.heading = self.section
+        elif self.heading is not None and self.section is None:
+            self.section = self.heading
         if self.page is not None and self.page_number is None:
             self.page_number = self.page
         elif self.page_number is not None and self.page is None:

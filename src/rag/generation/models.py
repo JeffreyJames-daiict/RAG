@@ -47,6 +47,10 @@ class GenerationRequest(BaseModel):
         default=None,
         description="Optional override for the grounding system prompt",
     )
+    context_package: Optional[Any] = Field(
+        default=None,
+        description="Structured ContextPackage if built via ContextBuilder",
+    )
 
 
 class ModelAttemptRecord(BaseModel):
@@ -70,6 +74,14 @@ class GenerationResponse(BaseModel):
     cited_ranks: List[int] = Field(
         default_factory=list,
         description="List of context chunk ranks explicitly referenced with [N] citations",
+    )
+    citations: List[Any] = Field(
+        default_factory=list,
+        description="Registry of citation objects associated with the context package",
+    )
+    context_package: Optional[Any] = Field(
+        default=None,
+        description="ContextPackage used for generation",
     )
     latency_ms: float = 0.0
     total_tokens: Optional[int] = None
