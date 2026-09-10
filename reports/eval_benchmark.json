@@ -1,0 +1,1789 @@
+{
+  "run_id": "eval_run_9bc5b7b8",
+  "timestamp": "2026-09-10T07:17:15.030888+00:00",
+  "dataset_id": "golden_rag_benchmark_v1",
+  "total_cases": 5,
+  "configurations": {
+    "dense_only": {
+      "config_name": "dense_only",
+      "total_cases": 5,
+      "successful_cases": 5,
+      "error_rate": 0.0,
+      "mean_recall_at_1": 0.2,
+      "mean_recall_at_3": 0.2,
+      "mean_recall_at_5": 0.2,
+      "mean_recall_at_10": 0.2,
+      "mean_precision_at_5": 0.2,
+      "mean_hit_rate_at_5": 0.0,
+      "mean_mrr": 0.0,
+      "mean_ndcg_at_5": 0.2,
+      "mean_exact_id_accuracy": 0.0,
+      "mean_table_accuracy": 0.0,
+      "mean_figure_accuracy": 0.0,
+      "mean_parent_doc_accuracy": 0.0,
+      "mean_citation_validity": 1.0,
+      "mean_citation_completeness": 1.0,
+      "mean_unsupported_citation_rate": 0.0,
+      "abstention_accuracy": 1.0,
+      "mean_phrase_coverage": 1.0,
+      "mean_answer_coverage_f1": 1.0,
+      "mean_latency_ms": 0.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "total_tokens": 0,
+      "total_cost_usd": 0.0
+    },
+    "bm25_only": {
+      "config_name": "bm25_only",
+      "total_cases": 5,
+      "successful_cases": 5,
+      "error_rate": 0.0,
+      "mean_recall_at_1": 0.2,
+      "mean_recall_at_3": 0.2,
+      "mean_recall_at_5": 0.2,
+      "mean_recall_at_10": 0.2,
+      "mean_precision_at_5": 0.2,
+      "mean_hit_rate_at_5": 0.0,
+      "mean_mrr": 0.0,
+      "mean_ndcg_at_5": 0.2,
+      "mean_exact_id_accuracy": 0.0,
+      "mean_table_accuracy": 0.0,
+      "mean_figure_accuracy": 0.0,
+      "mean_parent_doc_accuracy": 0.0,
+      "mean_citation_validity": 1.0,
+      "mean_citation_completeness": 1.0,
+      "mean_unsupported_citation_rate": 0.0,
+      "abstention_accuracy": 1.0,
+      "mean_phrase_coverage": 1.0,
+      "mean_answer_coverage_f1": 1.0,
+      "mean_latency_ms": 0.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "total_tokens": 0,
+      "total_cost_usd": 0.0
+    },
+    "hybrid": {
+      "config_name": "hybrid",
+      "total_cases": 5,
+      "successful_cases": 5,
+      "error_rate": 0.0,
+      "mean_recall_at_1": 0.2,
+      "mean_recall_at_3": 0.2,
+      "mean_recall_at_5": 0.2,
+      "mean_recall_at_10": 0.2,
+      "mean_precision_at_5": 0.2,
+      "mean_hit_rate_at_5": 0.0,
+      "mean_mrr": 0.0,
+      "mean_ndcg_at_5": 0.2,
+      "mean_exact_id_accuracy": 0.0,
+      "mean_table_accuracy": 0.0,
+      "mean_figure_accuracy": 0.0,
+      "mean_parent_doc_accuracy": 0.0,
+      "mean_citation_validity": 1.0,
+      "mean_citation_completeness": 1.0,
+      "mean_unsupported_citation_rate": 0.0,
+      "abstention_accuracy": 1.0,
+      "mean_phrase_coverage": 1.0,
+      "mean_answer_coverage_f1": 1.0,
+      "mean_latency_ms": 0.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "total_tokens": 0,
+      "total_cost_usd": 0.0
+    },
+    "hybrid_rrf": {
+      "config_name": "hybrid_rrf",
+      "total_cases": 5,
+      "successful_cases": 5,
+      "error_rate": 0.0,
+      "mean_recall_at_1": 0.2,
+      "mean_recall_at_3": 0.2,
+      "mean_recall_at_5": 0.2,
+      "mean_recall_at_10": 0.2,
+      "mean_precision_at_5": 0.2,
+      "mean_hit_rate_at_5": 0.0,
+      "mean_mrr": 0.0,
+      "mean_ndcg_at_5": 0.2,
+      "mean_exact_id_accuracy": 0.0,
+      "mean_table_accuracy": 0.0,
+      "mean_figure_accuracy": 0.0,
+      "mean_parent_doc_accuracy": 0.0,
+      "mean_citation_validity": 1.0,
+      "mean_citation_completeness": 1.0,
+      "mean_unsupported_citation_rate": 0.0,
+      "abstention_accuracy": 1.0,
+      "mean_phrase_coverage": 1.0,
+      "mean_answer_coverage_f1": 1.0,
+      "mean_latency_ms": 0.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "total_tokens": 0,
+      "total_cost_usd": 0.0
+    },
+    "hybrid_reranked": {
+      "config_name": "hybrid_reranked",
+      "total_cases": 5,
+      "successful_cases": 5,
+      "error_rate": 0.0,
+      "mean_recall_at_1": 0.2,
+      "mean_recall_at_3": 0.2,
+      "mean_recall_at_5": 0.2,
+      "mean_recall_at_10": 0.2,
+      "mean_precision_at_5": 0.2,
+      "mean_hit_rate_at_5": 0.0,
+      "mean_mrr": 0.0,
+      "mean_ndcg_at_5": 0.2,
+      "mean_exact_id_accuracy": 0.0,
+      "mean_table_accuracy": 0.0,
+      "mean_figure_accuracy": 0.0,
+      "mean_parent_doc_accuracy": 0.0,
+      "mean_citation_validity": 1.0,
+      "mean_citation_completeness": 1.0,
+      "mean_unsupported_citation_rate": 0.0,
+      "abstention_accuracy": 1.0,
+      "mean_phrase_coverage": 1.0,
+      "mean_answer_coverage_f1": 1.0,
+      "mean_latency_ms": 0.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "total_tokens": 0,
+      "total_cost_usd": 0.0
+    },
+    "full_rag": {
+      "config_name": "full_rag",
+      "total_cases": 5,
+      "successful_cases": 5,
+      "error_rate": 0.0,
+      "mean_recall_at_1": 0.2,
+      "mean_recall_at_3": 0.2,
+      "mean_recall_at_5": 0.2,
+      "mean_recall_at_10": 0.2,
+      "mean_precision_at_5": 0.2,
+      "mean_hit_rate_at_5": 0.0,
+      "mean_mrr": 0.0,
+      "mean_ndcg_at_5": 0.2,
+      "mean_exact_id_accuracy": 0.0,
+      "mean_table_accuracy": 0.0,
+      "mean_figure_accuracy": 0.0,
+      "mean_parent_doc_accuracy": 0.0,
+      "mean_citation_validity": 1.0,
+      "mean_citation_completeness": 1.0,
+      "mean_unsupported_citation_rate": 0.0,
+      "abstention_accuracy": 1.0,
+      "mean_phrase_coverage": 1.0,
+      "mean_answer_coverage_f1": 1.0,
+      "mean_latency_ms": 0.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "total_tokens": 0,
+      "total_cost_usd": 0.0
+    }
+  },
+  "case_results": [
+    {
+      "case_id": "case_001_factoid_battery",
+      "query": "What is the cell chemistry and nominal voltage of the Model X battery?",
+      "config_name": "dense_only",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_002_table_financial",
+      "query": "What was the operating margin and revenue in Q2 2024 according to the financial results table?",
+      "config_name": "dense_only",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": 0.0,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_003_figure_diagram",
+      "query": "What interface is shown connecting the memory controller to the host in Figure 3?",
+      "config_name": "dense_only",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": 0.0,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_004_parent_doc_avionics",
+      "query": "Explain the triple-redundant flight control architecture used during lunar descent.",
+      "config_name": "dense_only",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_005_unanswerable_quantum",
+      "query": "What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?",
+      "config_name": "dense_only",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "precision_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_001_factoid_battery",
+      "query": "What is the cell chemistry and nominal voltage of the Model X battery?",
+      "config_name": "bm25_only",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_002_table_financial",
+      "query": "What was the operating margin and revenue in Q2 2024 according to the financial results table?",
+      "config_name": "bm25_only",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": 0.0,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_003_figure_diagram",
+      "query": "What interface is shown connecting the memory controller to the host in Figure 3?",
+      "config_name": "bm25_only",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": 0.0,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_004_parent_doc_avionics",
+      "query": "Explain the triple-redundant flight control architecture used during lunar descent.",
+      "config_name": "bm25_only",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_005_unanswerable_quantum",
+      "query": "What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?",
+      "config_name": "bm25_only",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "precision_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_001_factoid_battery",
+      "query": "What is the cell chemistry and nominal voltage of the Model X battery?",
+      "config_name": "hybrid",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_002_table_financial",
+      "query": "What was the operating margin and revenue in Q2 2024 according to the financial results table?",
+      "config_name": "hybrid",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": 0.0,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_003_figure_diagram",
+      "query": "What interface is shown connecting the memory controller to the host in Figure 3?",
+      "config_name": "hybrid",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": 0.0,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_004_parent_doc_avionics",
+      "query": "Explain the triple-redundant flight control architecture used during lunar descent.",
+      "config_name": "hybrid",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_005_unanswerable_quantum",
+      "query": "What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?",
+      "config_name": "hybrid",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "precision_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_001_factoid_battery",
+      "query": "What is the cell chemistry and nominal voltage of the Model X battery?",
+      "config_name": "hybrid_rrf",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_002_table_financial",
+      "query": "What was the operating margin and revenue in Q2 2024 according to the financial results table?",
+      "config_name": "hybrid_rrf",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": 0.0,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_003_figure_diagram",
+      "query": "What interface is shown connecting the memory controller to the host in Figure 3?",
+      "config_name": "hybrid_rrf",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": 0.0,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_004_parent_doc_avionics",
+      "query": "Explain the triple-redundant flight control architecture used during lunar descent.",
+      "config_name": "hybrid_rrf",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_005_unanswerable_quantum",
+      "query": "What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?",
+      "config_name": "hybrid_rrf",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "precision_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_001_factoid_battery",
+      "query": "What is the cell chemistry and nominal voltage of the Model X battery?",
+      "config_name": "hybrid_reranked",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_002_table_financial",
+      "query": "What was the operating margin and revenue in Q2 2024 according to the financial results table?",
+      "config_name": "hybrid_reranked",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": 0.0,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_003_figure_diagram",
+      "query": "What interface is shown connecting the memory controller to the host in Figure 3?",
+      "config_name": "hybrid_reranked",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": 0.0,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_004_parent_doc_avionics",
+      "query": "Explain the triple-redundant flight control architecture used during lunar descent.",
+      "config_name": "hybrid_reranked",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_005_unanswerable_quantum",
+      "query": "What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?",
+      "config_name": "hybrid_reranked",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "precision_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_001_factoid_battery",
+      "query": "What is the cell chemistry and nominal voltage of the Model X battery?",
+      "config_name": "full_rag",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_002_table_financial",
+      "query": "What was the operating margin and revenue in Q2 2024 according to the financial results table?",
+      "config_name": "full_rag",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": 0.0,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_003_figure_diagram",
+      "query": "What interface is shown connecting the memory controller to the host in Figure 3?",
+      "config_name": "full_rag",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": 0.0,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_004_parent_doc_avionics",
+      "query": "Explain the triple-redundant flight control architecture used during lunar descent.",
+      "config_name": "full_rag",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "precision_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "case_id": "case_005_unanswerable_quantum",
+      "query": "What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?",
+      "config_name": "full_rag",
+      "retrieval_metrics": {
+        "recall_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "precision_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "hit_rate_at_k": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0,
+          "10": 0.0
+        },
+        "mrr": 0.0,
+        "ndcg_at_k": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0,
+          "10": 1.0
+        },
+        "exact_id_accuracy": 0.0,
+        "table_accuracy": null,
+        "figure_accuracy": null,
+        "parent_doc_accuracy": 0.0,
+        "retrieved_count": 0,
+        "latency_ms": 0.0
+      },
+      "generation_metrics": null,
+      "retrieved_chunk_ids": [],
+      "retrieved_document_ids": [],
+      "generated_answer": null,
+      "citations_used": [],
+      "warnings": [],
+      "error": null
+    }
+  ],
+  "threshold_results": {
+    "dense_only": {
+      "passed": false,
+      "failed_criteria": [
+        "Recall@5 (0.2000) is below minimum threshold (0.7000)",
+        "MRR (0.0000) is below minimum threshold (0.5000)",
+        "NDCG@5 (0.2000) is below minimum threshold (0.5000)"
+      ],
+      "details": {
+        "recall_at_5": {
+          "actual": 0.2,
+          "threshold": 0.7
+        },
+        "mrr": {
+          "actual": 0.0,
+          "threshold": 0.5
+        },
+        "ndcg_at_5": {
+          "actual": 0.2,
+          "threshold": 0.5
+        },
+        "citation_validity": {
+          "actual": 1.0,
+          "threshold": 0.85
+        },
+        "unsupported_citation_rate": {
+          "actual": 0.0,
+          "threshold": 0.15
+        },
+        "latency_ms": {
+          "actual": 0.0,
+          "threshold": 5000.0
+        },
+        "error_rate": {
+          "actual": 0.0,
+          "threshold": 0.05
+        },
+        "abstention_accuracy": {
+          "actual": 1.0,
+          "threshold": 0.8
+        }
+      }
+    },
+    "bm25_only": {
+      "passed": false,
+      "failed_criteria": [
+        "Recall@5 (0.2000) is below minimum threshold (0.7000)",
+        "MRR (0.0000) is below minimum threshold (0.5000)",
+        "NDCG@5 (0.2000) is below minimum threshold (0.5000)"
+      ],
+      "details": {
+        "recall_at_5": {
+          "actual": 0.2,
+          "threshold": 0.7
+        },
+        "mrr": {
+          "actual": 0.0,
+          "threshold": 0.5
+        },
+        "ndcg_at_5": {
+          "actual": 0.2,
+          "threshold": 0.5
+        },
+        "citation_validity": {
+          "actual": 1.0,
+          "threshold": 0.85
+        },
+        "unsupported_citation_rate": {
+          "actual": 0.0,
+          "threshold": 0.15
+        },
+        "latency_ms": {
+          "actual": 0.0,
+          "threshold": 5000.0
+        },
+        "error_rate": {
+          "actual": 0.0,
+          "threshold": 0.05
+        },
+        "abstention_accuracy": {
+          "actual": 1.0,
+          "threshold": 0.8
+        }
+      }
+    },
+    "hybrid": {
+      "passed": false,
+      "failed_criteria": [
+        "Recall@5 (0.2000) is below minimum threshold (0.7000)",
+        "MRR (0.0000) is below minimum threshold (0.5000)",
+        "NDCG@5 (0.2000) is below minimum threshold (0.5000)"
+      ],
+      "details": {
+        "recall_at_5": {
+          "actual": 0.2,
+          "threshold": 0.7
+        },
+        "mrr": {
+          "actual": 0.0,
+          "threshold": 0.5
+        },
+        "ndcg_at_5": {
+          "actual": 0.2,
+          "threshold": 0.5
+        },
+        "citation_validity": {
+          "actual": 1.0,
+          "threshold": 0.85
+        },
+        "unsupported_citation_rate": {
+          "actual": 0.0,
+          "threshold": 0.15
+        },
+        "latency_ms": {
+          "actual": 0.0,
+          "threshold": 5000.0
+        },
+        "error_rate": {
+          "actual": 0.0,
+          "threshold": 0.05
+        },
+        "abstention_accuracy": {
+          "actual": 1.0,
+          "threshold": 0.8
+        }
+      }
+    },
+    "hybrid_rrf": {
+      "passed": false,
+      "failed_criteria": [
+        "Recall@5 (0.2000) is below minimum threshold (0.7000)",
+        "MRR (0.0000) is below minimum threshold (0.5000)",
+        "NDCG@5 (0.2000) is below minimum threshold (0.5000)"
+      ],
+      "details": {
+        "recall_at_5": {
+          "actual": 0.2,
+          "threshold": 0.7
+        },
+        "mrr": {
+          "actual": 0.0,
+          "threshold": 0.5
+        },
+        "ndcg_at_5": {
+          "actual": 0.2,
+          "threshold": 0.5
+        },
+        "citation_validity": {
+          "actual": 1.0,
+          "threshold": 0.85
+        },
+        "unsupported_citation_rate": {
+          "actual": 0.0,
+          "threshold": 0.15
+        },
+        "latency_ms": {
+          "actual": 0.0,
+          "threshold": 5000.0
+        },
+        "error_rate": {
+          "actual": 0.0,
+          "threshold": 0.05
+        },
+        "abstention_accuracy": {
+          "actual": 1.0,
+          "threshold": 0.8
+        }
+      }
+    },
+    "hybrid_reranked": {
+      "passed": false,
+      "failed_criteria": [
+        "Recall@5 (0.2000) is below minimum threshold (0.7000)",
+        "MRR (0.0000) is below minimum threshold (0.5000)",
+        "NDCG@5 (0.2000) is below minimum threshold (0.5000)"
+      ],
+      "details": {
+        "recall_at_5": {
+          "actual": 0.2,
+          "threshold": 0.7
+        },
+        "mrr": {
+          "actual": 0.0,
+          "threshold": 0.5
+        },
+        "ndcg_at_5": {
+          "actual": 0.2,
+          "threshold": 0.5
+        },
+        "citation_validity": {
+          "actual": 1.0,
+          "threshold": 0.85
+        },
+        "unsupported_citation_rate": {
+          "actual": 0.0,
+          "threshold": 0.15
+        },
+        "latency_ms": {
+          "actual": 0.0,
+          "threshold": 5000.0
+        },
+        "error_rate": {
+          "actual": 0.0,
+          "threshold": 0.05
+        },
+        "abstention_accuracy": {
+          "actual": 1.0,
+          "threshold": 0.8
+        }
+      }
+    },
+    "full_rag": {
+      "passed": false,
+      "failed_criteria": [
+        "Recall@5 (0.2000) is below minimum threshold (0.7000)",
+        "MRR (0.0000) is below minimum threshold (0.5000)",
+        "NDCG@5 (0.2000) is below minimum threshold (0.5000)"
+      ],
+      "details": {
+        "recall_at_5": {
+          "actual": 0.2,
+          "threshold": 0.7
+        },
+        "mrr": {
+          "actual": 0.0,
+          "threshold": 0.5
+        },
+        "ndcg_at_5": {
+          "actual": 0.2,
+          "threshold": 0.5
+        },
+        "citation_validity": {
+          "actual": 1.0,
+          "threshold": 0.85
+        },
+        "unsupported_citation_rate": {
+          "actual": 0.0,
+          "threshold": 0.15
+        },
+        "latency_ms": {
+          "actual": 0.0,
+          "threshold": 5000.0
+        },
+        "error_rate": {
+          "actual": 0.0,
+          "threshold": 0.05
+        },
+        "abstention_accuracy": {
+          "actual": 1.0,
+          "threshold": 0.8
+        }
+      }
+    }
+  },
+  "overall_passed": false
+}

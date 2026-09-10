@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Evaluation Report — eval_run_9bc5b7b8</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #111827;
+            color: #f3f4f6;
+            margin: 0;
+            padding: 30px;
+        }
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: #1f2937;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            border: 1px solid #374151;
+        }
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th {
+            background-color: #374151;
+            padding: 12px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #9ca3af;
+        }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .stat-card {
+            background: #111827;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #374151;
+        }
+        .stat-title {
+            font-size: 12px;
+            color: #9ca3af;
+            text-transform: uppercase;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #60a5fa;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="card">
+            <div class="header-flex">
+                <div>
+                    <h1 style="margin:0 0 8px 0;font-size:28px;">RAG Evaluation Benchmark Report</h1>
+                    <p style="margin:0;color:#9ca3af;">Run ID: <code>eval_run_9bc5b7b8</code> | Dataset: <strong>golden_rag_benchmark_v1</strong> | Timestamp: 2026-09-10T07:17:15.030888+00:00</p>
+                </div>
+                <div><span style="background:#ef4444;color:#fff;padding:6px 12px;border-radius:20px;font-weight:bold;">FAILED REGRESSION</span></div>
+            </div>
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-title">Total Cases</div>
+                    <div class="stat-value">5</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Configurations Compared</div>
+                    <div class="stat-value">6</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Evaluation Status</div>
+                    <div class="stat-value" style="color:#ef4444;">FAIL</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Comparison -->
+        <div class="card">
+            <h2 style="margin-top:0;">Configuration Comparison Benchmark</h2>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Configuration</th>
+                            <th>Recall@5</th>
+                            <th>MRR</th>
+                            <th>NDCG@5</th>
+                            <th>Exact ID Acc</th>
+                            <th>Parent Doc Acc</th>
+                            <th>Citation Validity</th>
+                            <th>Abstention Acc</th>
+                            <th>Latency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+            <tr>
+                <td style="font-weight:600;padding:12px;border-bottom:1px solid #374151;">dense_only</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0 ms</td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight:600;padding:12px;border-bottom:1px solid #374151;">bm25_only</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0 ms</td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight:600;padding:12px;border-bottom:1px solid #374151;">hybrid</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0 ms</td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight:600;padding:12px;border-bottom:1px solid #374151;">hybrid_rrf</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0 ms</td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight:600;padding:12px;border-bottom:1px solid #374151;">hybrid_reranked</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0 ms</td>
+            </tr>
+            
+            <tr>
+                <td style="font-weight:600;padding:12px;border-bottom:1px solid #374151;">full_rag</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.2000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">1.0000</td>
+                <td style="padding:12px;border-bottom:1px solid #374151;">0.0 ms</td>
+            </tr>
+            
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Per-Case Breakdown -->
+        <div class="card">
+            <h2 style="margin-top:0;">Case Breakdown (Top 100)</h2>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Case ID</th>
+                            <th>Config</th>
+                            <th>Query</th>
+                            <th>Recall@5</th>
+                            <th>MRR</th>
+                            <th>Citation Validity</th>
+                            <th>Latency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_001_factoid_battery</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">dense_only</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the cell chemistry and nominal voltage of the Model X battery?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_002_table_financial</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">dense_only</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What was the operating margin and revenue in Q2 2024 according to the financial results table?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_003_figure_diagram</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">dense_only</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What interface is shown connecting the memory controller to the host in Figure 3?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_004_parent_doc_avionics</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">dense_only</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">Explain the triple-redundant flight control architecture used during lunar descent.</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_005_unanswerable_quantum</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">dense_only</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">1.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_001_factoid_battery</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">bm25_only</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the cell chemistry and nominal voltage of the Model X battery?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_002_table_financial</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">bm25_only</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What was the operating margin and revenue in Q2 2024 according to the financial results table?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_003_figure_diagram</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">bm25_only</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What interface is shown connecting the memory controller to the host in Figure 3?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_004_parent_doc_avionics</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">bm25_only</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">Explain the triple-redundant flight control architecture used during lunar descent.</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_005_unanswerable_quantum</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">bm25_only</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">1.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_001_factoid_battery</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the cell chemistry and nominal voltage of the Model X battery?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_002_table_financial</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What was the operating margin and revenue in Q2 2024 according to the financial results table?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_003_figure_diagram</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What interface is shown connecting the memory controller to the host in Figure 3?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_004_parent_doc_avionics</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">Explain the triple-redundant flight control architecture used during lunar descent.</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_005_unanswerable_quantum</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">1.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_001_factoid_battery</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid_rrf</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the cell chemistry and nominal voltage of the Model X battery?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_002_table_financial</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid_rrf</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What was the operating margin and revenue in Q2 2024 according to the financial results table?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_003_figure_diagram</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid_rrf</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What interface is shown connecting the memory controller to the host in Figure 3?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_004_parent_doc_avionics</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid_rrf</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">Explain the triple-redundant flight control architecture used during lunar descent.</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_005_unanswerable_quantum</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid_rrf</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">1.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_001_factoid_battery</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid_reranked</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the cell chemistry and nominal voltage of the Model X battery?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_002_table_financial</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid_reranked</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What was the operating margin and revenue in Q2 2024 according to the financial results table?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_003_figure_diagram</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid_reranked</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What interface is shown connecting the memory controller to the host in Figure 3?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_004_parent_doc_avionics</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid_reranked</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">Explain the triple-redundant flight control architecture used during lunar descent.</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_005_unanswerable_quantum</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">hybrid_reranked</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">1.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_001_factoid_battery</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">full_rag</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the cell chemistry and nominal voltage of the Model X battery?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_002_table_financial</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">full_rag</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What was the operating margin and revenue in Q2 2024 according to the financial results table?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_003_figure_diagram</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">full_rag</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What interface is shown connecting the memory controller to the host in Figure 3?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_004_parent_doc_avionics</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">full_rag</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">Explain the triple-redundant flight control architecture used during lunar descent.</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #374151;font-family:monospace;">case_005_unanswerable_quantum</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;"><span style="background:#1f2937;padding:3px 8px;border-radius:4px;">full_rag</span></td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;color:#10b981;font-weight:bold;">1.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.00</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">N/A</td>
+                <td style="padding:10px;border-bottom:1px solid #374151;">0.0ms</td>
+            </tr>
+            
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

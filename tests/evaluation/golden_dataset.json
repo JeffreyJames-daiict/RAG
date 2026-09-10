@@ -1,0 +1,82 @@
+{
+  "dataset_id": "golden_rag_benchmark_v1",
+  "version": "1.0",
+  "description": "Comprehensive golden dataset covering factoid, table, figure, parent-doc, and unanswerable queries.",
+  "cases": [
+    {
+      "case_id": "case_001_factoid_battery",
+      "tenant_id": "acme_auto",
+      "query": "What is the cell chemistry and nominal voltage of the Model X battery?",
+      "query_type": "factoid",
+      "expected_document_ids": ["doc_battery_spec"],
+      "expected_chunk_ids": ["chunk_battery_chem_01"],
+      "expected_answer": "The Model X battery utilizes Lithium Iron Phosphate (LFP) chemistry with a nominal voltage of 3.2V per cell.",
+      "expected_citations": ["[C1]"],
+      "difficulty": "easy",
+      "language": "en",
+      "is_unanswerable": false,
+      "required_phrases": ["Lithium Iron Phosphate", "3.2V"],
+      "metadata": {"domain": "automotive"}
+    },
+    {
+      "case_id": "case_002_table_financial",
+      "tenant_id": "acme_finance",
+      "query": "What was the operating margin and revenue in Q2 2024 according to the financial results table?",
+      "query_type": "table",
+      "expected_document_ids": ["doc_q2_earnings"],
+      "expected_chunk_ids": ["tbl_earnings_q2"],
+      "expected_answer": "In Q2 2024, revenue was $4,890M with an operating margin of 30.2%.",
+      "expected_citations": ["[C1]"],
+      "difficulty": "medium",
+      "language": "en",
+      "is_unanswerable": false,
+      "required_phrases": ["$4,890M", "30.2%"],
+      "metadata": {"domain": "finance"}
+    },
+    {
+      "case_id": "case_003_figure_diagram",
+      "tenant_id": "acme_hardware",
+      "query": "What interface is shown connecting the memory controller to the host in Figure 3?",
+      "query_type": "figure",
+      "expected_document_ids": ["doc_hardware_arch"],
+      "expected_chunk_ids": ["fig_pcie_bus_03"],
+      "expected_answer": "Figure 3 illustrates a PCIe Gen 5 x16 interconnect connecting the processor to the DDR5 memory controller.",
+      "expected_citations": ["[C1]"],
+      "difficulty": "medium",
+      "language": "en",
+      "is_unanswerable": false,
+      "required_phrases": ["PCIe Gen 5", "DDR5"],
+      "metadata": {"domain": "hardware"}
+    },
+    {
+      "case_id": "case_004_parent_doc_avionics",
+      "tenant_id": "acme_aerospace",
+      "query": "Explain the triple-redundant flight control architecture used during lunar descent.",
+      "query_type": "parent_doc",
+      "expected_document_ids": ["doc_apollo_avionics"],
+      "expected_chunk_ids": ["chunk_descent_guidance_01", "chunk_descent_guidance_02"],
+      "expected_answer": "The primary guidance and navigation computer executes real-time descent trajectory control backed by an independent abort guidance system.",
+      "expected_citations": ["[C1]", "[C2]"],
+      "difficulty": "hard",
+      "language": "en",
+      "is_unanswerable": false,
+      "required_phrases": ["guidance", "abort"],
+      "metadata": {"domain": "aerospace"}
+    },
+    {
+      "case_id": "case_005_unanswerable_quantum",
+      "tenant_id": "acme_science",
+      "query": "What is the coherence time of the topological qubit at 4 Kelvin in the laboratory sample?",
+      "query_type": "unanswerable",
+      "expected_document_ids": [],
+      "expected_chunk_ids": [],
+      "expected_answer": "The provided context does not contain information regarding topological qubit coherence time at 4 Kelvin.",
+      "expected_citations": [],
+      "difficulty": "hard",
+      "language": "en",
+      "is_unanswerable": true,
+      "required_phrases": ["not contain information"],
+      "metadata": {"domain": "quantum_physics"}
+    }
+  ]
+}
