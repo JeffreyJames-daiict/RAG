@@ -184,6 +184,25 @@
     "llm_provider": "mock",
     "llm_model": "google/gemini-2.5-flash"
   },
+  "agentic": {
+    "enabled": false,
+    "max_steps": 5,
+    "max_retrieval_calls": 4,
+    "max_tool_calls": 6,
+    "max_tokens": 4000,
+    "max_cost": 0.05,
+    "max_execution_time": 30.0,
+    "max_query_rewrites": 3,
+    "allowed_tools": [
+      "retriever",
+      "calculator",
+      "table_lookup",
+      "metadata_lookup"
+    ],
+    "planner_model": "google/gemini-2.5-flash",
+    "critic_model": "google/gemini-2.5-flash",
+    "final_model": "google/gemini-2.5-flash"
+  },
   "logging": {
     "level": "INFO",
     "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

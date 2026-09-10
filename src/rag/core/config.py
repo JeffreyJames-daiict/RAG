@@ -965,6 +965,71 @@ class QueryRoutingConfig(BaseModel):
     )
 
 
+class AgenticRAGConfig(BaseModel):
+    """Configuration for optional Agentic RAG orchestration layer."""
+    enabled: bool = Field(
+        default_factory=lambda: os.getenv("AGENTIC_RAG_ENABLED", "false").lower() in ("1", "true", "yes"),
+        description="Enable agentic multi-step RAG workflow (true/false)",
+    )
+    max_steps: int = Field(
+        default_factory=lambda: int(os.getenv("AGENTIC_MAX_STEPS", "5")),
+        ge=1,
+        le=20,
+        description="Maximum execution loop steps allowed",
+    )
+    max_retrieval_calls: int = Field(
+        default_factory=lambda: int(os.getenv("AGENTIC_MAX_RETRIEVAL_CALLS", "4")),
+        ge=1,
+        le=15,
+        description="Maximum retrieval calls allowed",
+    )
+    max_tool_calls: int = Field(
+        default_factory=lambda: int(os.getenv("AGENTIC_MAX_TOOL_CALLS", "6")),
+        ge=0,
+        le=20,
+        description="Maximum auxiliary tool calls allowed",
+    )
+    max_tokens: int = Field(
+        default_factory=lambda: int(os.getenv("AGENTIC_MAX_TOKENS", "4000")),
+        ge=100,
+        le=64000,
+        description="Maximum total LLM tokens across all agents",
+    )
+    max_cost: float = Field(
+        default_factory=lambda: float(os.getenv("AGENTIC_MAX_COST", "0.05")),
+        ge=0.0,
+        description="Maximum cost in USD allowed for workflow",
+    )
+    max_execution_time: float = Field(
+        default_factory=lambda: float(os.getenv("AGENTIC_MAX_EXECUTION_TIME", "30.0")),
+        gt=0.0,
+        le=300.0,
+        description="Maximum wall-clock execution time in seconds",
+    )
+    max_query_rewrites: int = Field(
+        default_factory=lambda: int(os.getenv("AGENTIC_MAX_QUERY_REWRITES", "3")),
+        ge=0,
+        le=10,
+        description="Maximum query refinement iterations allowed",
+    )
+    allowed_tools: List[str] = Field(
+        default_factory=lambda: ["retriever", "calculator", "table_lookup", "metadata_lookup"],
+        description="List of permitted tools",
+    )
+    planner_model: str = Field(
+        default="google/gemini-2.5-flash",
+        description="Model used for planning and decomposition",
+    )
+    critic_model: str = Field(
+        default="google/gemini-2.5-flash",
+        description="Model used for evidence evaluation",
+    )
+    final_model: str = Field(
+        default="google/gemini-2.5-flash",
+        description="Model used for final answer synthesis",
+    )
+
+
 class LoggingConfig(BaseModel):
     """Logging format and level."""
     level: str = Field(default="INFO", description="Logging level: DEBUG | INFO | WARNING | ERROR | CRITICAL")
@@ -994,6 +1059,7 @@ class Settings(BaseModel):
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
     query_rewrite: QueryRewriteConfig = Field(default_factory=QueryRewriteConfig)
     routing: QueryRoutingConfig = Field(default_factory=QueryRoutingConfig)
+    agentic: AgenticRAGConfig = Field(default_factory=AgenticRAGConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
