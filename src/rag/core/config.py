@@ -860,6 +860,76 @@ class GenerationConfig(BaseModel):
     )
 
 
+class QueryRewriteConfig(BaseModel):
+    """Configuration for query rewriting and expansion layer."""
+    enabled: bool = Field(
+        default_factory=lambda: os.getenv("QUERY_REWRITING_ENABLED", "false").lower() in ("1", "true", "yes"),
+        description="Enable query rewriting and expansion before retrieval",
+    )
+    provider: str = Field(
+        default_factory=lambda: os.getenv("QUERY_REWRITE_PROVIDER", "mock"),
+        description="LLM provider for query rewriting: mock | openrouter",
+    )
+    model: str = Field(
+        default_factory=lambda: os.getenv("QUERY_REWRITE_MODEL", "google/gemini-2.5-flash"),
+        description="Model identifier for query rewriting",
+    )
+    max_queries: int = Field(
+        default_factory=lambda: int(os.getenv("QUERY_REWRITE_MAX_QUERIES", "5")),
+        ge=1,
+        le=20,
+        description="Maximum number of rewritten queries to output",
+    )
+    timeout_sec: float = Field(
+        default_factory=lambda: float(os.getenv("QUERY_REWRITE_TIMEOUT_SECONDS", "5.0")),
+        gt=0.0,
+        le=60.0,
+        description="Timeout threshold for query rewrite request in seconds",
+    )
+    confidence_threshold: float = Field(
+        default_factory=lambda: float(os.getenv("QUERY_REWRITE_CONFIDENCE_THRESHOLD", "0.3")),
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence score to accept rewritten queries",
+    )
+    fallback_enabled: bool = Field(
+        default_factory=lambda: os.getenv("QUERY_REWRITE_FALLBACK_ENABLED", "true").lower() in ("1", "true", "yes"),
+        description="Fall back to original query if rewriting fails or produces low confidence",
+    )
+    temperature: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=2.0,
+        description="Temperature for query rewrite generation",
+    )
+    max_tokens: int = Field(
+        default=500,
+        ge=16,
+        le=4096,
+        description="Maximum tokens for query rewrite LLM generation",
+    )
+    enable_expansion: bool = Field(
+        default=True,
+        description="Enable query expansion strategy",
+    )
+    enable_multi_query: bool = Field(
+        default=True,
+        description="Enable multi-query generation strategy",
+    )
+    enable_hyde: bool = Field(
+        default=False,
+        description="Enable Hypothetical Document Embeddings (HyDE) strategy (opt-in)",
+    )
+    enable_decomposition: bool = Field(
+        default=True,
+        description="Enable query decomposition for complex queries",
+    )
+    enable_conversation: bool = Field(
+        default=True,
+        description="Enable conversation-aware query rewriting",
+    )
+
+
 class LoggingConfig(BaseModel):
     """Logging format and level."""
     level: str = Field(default="INFO", description="Logging level: DEBUG | INFO | WARNING | ERROR | CRITICAL")
@@ -887,6 +957,7 @@ class Settings(BaseModel):
     retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
     context: ContextBuilderConfig = Field(default_factory=ContextBuilderConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
+    query_rewrite: QueryRewriteConfig = Field(default_factory=QueryRewriteConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 

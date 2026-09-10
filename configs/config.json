@@ -159,6 +159,22 @@
     "force_fetch": false,
     "auto_migrate": true
   },
+  "query_rewrite": {
+    "enabled": false,
+    "provider": "mock",
+    "model": "google/gemini-2.5-flash",
+    "max_queries": 5,
+    "timeout_sec": 5.0,
+    "confidence_threshold": 0.3,
+    "fallback_enabled": true,
+    "temperature": 0.3,
+    "max_tokens": 500,
+    "enable_expansion": true,
+    "enable_multi_query": true,
+    "enable_hyde": false,
+    "enable_decomposition": true,
+    "enable_conversation": true
+  },
   "logging": {
     "level": "INFO",
     "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
