@@ -5,21 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
-
-class Citation(BaseModel):
-    """Stable citation mapping linking an in-text marker like [C1] to source provenance."""
-
-    citation_id: str = Field(..., description="Unique citation marker, e.g. '[C1]'")
-    chunk_id: str = Field(..., description="Referenced chunk identifier")
-    document_id: str = Field(..., description="Document identifier")
-    filename: str = Field(default="", description="Original file name")
-    page: Optional[int] = Field(default=None, description="Page number of evidence")
-    section: Optional[str] = Field(default=None, description="Section heading breadcrumb")
-    asset_id: Optional[str] = Field(default=None, description="Referenced visual asset ID if applicable")
-    table_id: Optional[str] = Field(default=None, description="Referenced structured table ID if applicable")
-    snippet: str = Field(default="", description="Short verbatim textual evidence snippet")
-    score: Optional[float] = Field(default=None, description="Retrieval or reranking score")
-    source_uri: Optional[str] = Field(default=None, description="Storage or source URI")
+from rag.provenance.models import Citation
 
 
 class TableContext(BaseModel):
